@@ -1,4 +1,4 @@
-# 🏎️ Neon Drift: Cyber Circuit
+# 🏎️ webracer-3d // Neon Drift: Cyber Circuit
 
 Ein rasanter **3D-Arcade-Combat-Racer** im Browser im **Retro-Synthwave- & Cyberpunk-Stil** mit Three.js, maßgeschneiderter Arcade-Raycast-Fahrphysik, dynamischer Follow-Cam, KI-Gegnern, 5 Waffen-Powerups und prozeduraler Web-Audio-Synthese.
 
