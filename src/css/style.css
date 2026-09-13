@@ -1,0 +1,317 @@
+:root {
+  --neon-cyan: #00f3ff;
+  --neon-pink: #ff007f;
+  --neon-purple: #9d00ff;
+  --neon-yellow: #ffe600;
+  --bg-dark: #050510;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-dark);
+  font-family: 'Orbitron', 'Rajdhani', sans-serif;
+  color: #fff;
+}
+
+#game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+#racer-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* HUD Overlay */
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+}
+
+.hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.hud-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.hud-box {
+  background: rgba(5, 5, 20, 0.65);
+  border: 1px solid var(--neon-cyan);
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
+  padding: 12px 20px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(4px);
+}
+
+.hud-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 8px var(--neon-cyan);
+  margin-bottom: 4px;
+}
+
+.hud-value {
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 10px #fff;
+}
+
+.hud-value small {
+  font-size: 18px;
+  color: #888;
+}
+
+/* Speedometer */
+#speedo-box {
+  align-items: flex-end;
+  min-width: 220px;
+}
+
+.speedo-dial {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+#speed-val {
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--neon-yellow);
+  text-shadow: 0 0 15px var(--neon-yellow);
+}
+
+.speed-unit {
+  font-size: 16px;
+  color: var(--neon-cyan);
+}
+
+.boost-meter-container {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--neon-pink);
+  margin: 6px 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+#boost-meter-bar {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--neon-purple), var(--neon-pink));
+  box-shadow: 0 0 10px var(--neon-pink);
+  transition: width 0.1s linear;
+}
+
+/* Weapon Slot */
+#weapon-slot {
+  min-width: 180px;
+  text-align: center;
+}
+
+#weapon-icon {
+  font-size: 18px;
+  font-weight: 900;
+  padding: 8px 12px;
+  margin-top: 4px;
+  border-radius: 4px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  letter-spacing: 1px;
+}
+
+.weapon-empty {
+  color: #666;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.weapon-missile {
+  color: #fff;
+  background: rgba(255, 0, 127, 0.4);
+  border-color: var(--neon-pink) !important;
+  text-shadow: 0 0 10px var(--neon-pink);
+}
+
+.weapon-blaster {
+  color: #fff;
+  background: rgba(0, 243, 255, 0.4);
+  border-color: var(--neon-cyan) !important;
+  text-shadow: 0 0 10px var(--neon-cyan);
+}
+
+.weapon-mine {
+  color: #fff;
+  background: rgba(255, 230, 0, 0.4);
+  border-color: var(--neon-yellow) !important;
+  text-shadow: 0 0 10px var(--neon-yellow);
+}
+
+.weapon-boost {
+  color: #fff;
+  background: rgba(157, 0, 255, 0.4);
+  border-color: var(--neon-purple) !important;
+  text-shadow: 0 0 10px var(--neon-purple);
+}
+
+.weapon-shield {
+  color: #fff;
+  background: rgba(0, 255, 128, 0.4);
+  border-color: #00ff80 !important;
+  text-shadow: 0 0 10px #00ff80;
+}
+
+/* Radar */
+#radar-container {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 140px;
+  height: 140px;
+  background: rgba(5, 5, 20, 0.7);
+  border: 1px solid var(--neon-pink);
+  box-shadow: 0 0 12px rgba(255, 0, 127, 0.3);
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+#radar-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Center Message / Countdown */
+#center-message {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 72px;
+  font-weight: 900;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 0 25px var(--neon-cyan), 0 0 50px var(--neon-pink);
+  pointer-events: none;
+}
+
+/* Overlay Screen */
+#overlay-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(5, 5, 16, 0.88);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.3s ease;
+}
+
+#overlay-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.overlay-content {
+  text-align: center;
+  max-width: 600px;
+  padding: 40px;
+  border: 2px solid var(--neon-cyan);
+  box-shadow: 0 0 30px rgba(0, 243, 255, 0.4), inset 0 0 20px rgba(0, 243, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(10, 10, 30, 0.8);
+}
+
+.glitch-title {
+  font-size: 54px;
+  font-weight: 900;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-pink);
+  letter-spacing: 4px;
+}
+
+.sub-title {
+  font-size: 18px;
+  color: var(--neon-pink);
+  margin-bottom: 28px;
+  letter-spacing: 6px;
+  text-shadow: 0 0 10px var(--neon-pink);
+}
+
+.controls-guide {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 16px 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.control-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.control-row span {
+  color: #aaa;
+}
+
+.control-row strong {
+  color: var(--neon-yellow);
+}
+
+.neon-btn {
+  background: linear-gradient(45deg, var(--neon-pink), var(--neon-purple));
+  color: #fff;
+  border: none;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  font-weight: 900;
+  padding: 16px 36px;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(255, 0, 127, 0.6);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  letter-spacing: 2px;
+}
+
+.neon-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 30px rgba(255, 0, 127, 0.9);
+}

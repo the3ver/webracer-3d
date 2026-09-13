@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEON DRIFT // CYBER CIRCUIT 3D</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="racer-canvas"></canvas>
+
+    <!-- HUD Overlay -->
+    <div id="hud">
+      <!-- Top Bar: Lap, Time, Position -->
+      <div class="hud-top">
+        <div class="hud-box" id="pos-box">
+          <span class="hud-label">POSITION</span>
+          <span class="hud-value" id="pos-val">1<small>/4</small></span>
+        </div>
+        <div class="hud-box" id="lap-box">
+          <span class="hud-label">RUNDE</span>
+          <span class="hud-value" id="lap-val">1<small>/3</small></span>
+        </div>
+        <div class="hud-box" id="time-box">
+          <span class="hud-label">ZEIT</span>
+          <span class="hud-value" id="time-val">00:00.00</span>
+        </div>
+      </div>
+
+      <!-- Center Countdown / Notifications -->
+      <div id="center-message"></div>
+
+      <!-- Bottom Bar: Weapon Slot & Speedometer -->
+      <div class="hud-bottom">
+        <!-- Weapon Slot -->
+        <div class="hud-box" id="weapon-slot">
+          <span class="hud-label">WAFFE [F / ENTER]</span>
+          <div id="weapon-icon" class="weapon-empty">KEINE</div>
+        </div>
+
+        <!-- Speedometer -->
+        <div class="hud-box" id="speedo-box">
+          <div class="speedo-dial">
+            <span id="speed-val">000</span>
+            <span class="speed-unit">KM/H</span>
+          </div>
+          <div class="boost-meter-container">
+            <div id="boost-meter-bar"></div>
+          </div>
+          <span class="hud-label">NITRO BOOST</span>
+        </div>
+      </div>
+
+      <!-- Radar / Minimap -->
+      <div id="radar-container">
+        <canvas id="radar-canvas" width="160" height="160"></canvas>
+      </div>
+    </div>
+
+    <!-- Start / Pause Screen -->
+    <div id="overlay-screen" class="visible">
+      <div class="overlay-content">
+        <h1 class="glitch-title">NEON DRIFT</h1>
+        <h2 class="sub-title">// CYBER CIRCUIT 3D //</h2>
+        
+        <div class="controls-guide">
+          <div class="control-row"><span>GAS / BREMSE:</span><strong>W / S oder Pfeil Oben/Unten</strong></div>
+          <div class="control-row"><span>LENKUNG:</span><strong>A / D oder Pfeil Links/Rechts</strong></div>
+          <div class="control-row"><span>DRIFTEN:</span><strong>LEERTASTE oder SHIFT</strong></div>
+          <div class="control-row"><span>WAFFE ABFEUERN:</span><strong>F oder ENTER</strong></div>
+          <div class="control-row"><span>KAMERA WECHSELN:</span><strong>C</strong></div>
+          <div class="control-row"><span>AUDIO TOGGLE:</span><strong>M</strong></div>
+        </div>
+
+        <button id="btn-start" class="neon-btn">RENNEN STARTEN</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
