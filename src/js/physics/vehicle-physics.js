@@ -35,6 +35,14 @@ export class VehiclePhysics {
     this.empTimer = 0.0;
     this.hasShield = false;
 
+    // Falling off track & Respawn State
+    this.isFalling = false;
+    this.fallVelocityY = 0.0;
+    this.fallTimer = 0.0;
+    this.lastSafeT = 0.0;
+    this.respawnBlinkTimer = 0.0;
+    this.onRespawn = null;
+
     // Track progression & lap data
     this.closestTrack = null;
     this.trackT = 0.0;
@@ -60,9 +68,22 @@ export class VehiclePhysics {
     this.right.set(-forward.z, 0, forward.x);
     this.closestTrack = this.track.getClosestTrackPoint(this.position);
     this.trackT = this.closestTrack.t;
+    this.lastSafeT = this.trackT;
+
+    this.isFalling = false;
+    this.fallVelocityY = 0.0;
+    this.fallTimer = 0.0;
+    this.respawnBlinkTimer = 0.0;
   }
 
   setInputs(throttle, steer, handbrake) {
+    if (this.isFalling) {
+      this.throttleInput = 0;
+      this.steerInput = 0;
+      this.isDrifting = false;
+      this.isBraking = false;
+      return;
+    }
     this.throttleInput = throttle;
     this.steerInput = steer;
     this.isDrifting = handbrake;
@@ -70,10 +91,12 @@ export class VehiclePhysics {
   }
 
   triggerBoost(duration = 1.8) {
+    if (this.isFalling) return;
     this.boostTimer = Math.max(this.boostTimer, duration);
   }
 
   triggerSpin(duration = 1.2) {
+    if (this.isFalling || this.respawnBlinkTimer > 0) return false;
     if (this.hasShield) {
       this.hasShield = false;
       return false; // Absorbed!
@@ -84,6 +107,7 @@ export class VehiclePhysics {
   }
 
   triggerEmp(duration = 2.5) {
+    if (this.isFalling || this.respawnBlinkTimer > 0) return false;
     if (this.hasShield) {
       this.hasShield = false;
       return false;
@@ -93,10 +117,75 @@ export class VehiclePhysics {
     return true;
   }
 
+  respawn() {
+    // Pick safe track position slightly behind where vehicle went off
+    const safeT = (this.lastSafeT - 0.012 + 1.0) % 1.0;
+    const info = this.track.getTrackTransformAt(safeT);
+
+    // Place vehicle in center of track, slightly above road surface
+    this.position.copy(info.position);
+    this.position.y += 0.5;
+
+    // Align with forward track direction
+    const forward = info.tangent.clone().normalize();
+    this.forward.copy(forward);
+    this.right.set(-forward.z, 0, forward.x);
+    const angle = Math.atan2(-forward.x, -forward.z);
+    this.rotation.set(0, angle, 0);
+
+    // Rolling start speed (40 km/h) in forward direction
+    this.speed = 40.0;
+    this.velocity.copy(this.forward).multiplyScalar(this.speed / 3.6);
+
+    // Reset falling and status
+    this.isFalling = false;
+    this.fallVelocityY = 0.0;
+    this.fallTimer = 0.0;
+    this.spinTimer = 0.0;
+    this.empTimer = 0.0;
+    this.respawnBlinkTimer = 2.0; // 2 seconds of blinking invulnerability animation
+
+    if (this.onRespawn) {
+      this.onRespawn();
+    }
+  }
+
   update(delta) {
     if (delta > 0.1) delta = 0.1; // Clamp large step frame spikes
 
-    // 1. Handle Timers (EMP, Spin, Boost)
+    // 0. Handle Respawn Blinking Timer
+    if (this.respawnBlinkTimer > 0) {
+      this.respawnBlinkTimer -= delta;
+    }
+
+    // 1. Handle Freefall when off track
+    if (this.isFalling) {
+      this.fallTimer += delta;
+      this.fallVelocityY -= 36.0 * delta; // Gravity
+      this.position.y += this.fallVelocityY * delta;
+
+      // Tumbling rotation as car plummets into the synthwave abyss
+      this.rotation.x += 2.0 * delta;
+      this.rotation.z += 2.8 * delta;
+
+      // Carry momentum outward
+      this.position.x += this.velocity.x * delta;
+      this.position.z += this.velocity.z * delta;
+
+      // Natural air slowing
+      this.speed *= Math.pow(0.85, delta * 60);
+
+      // Height drop limit for respawn
+      const trackPt = this.closestTrack ? this.closestTrack.point : null;
+      const dropThreshold = trackPt ? (trackPt.y - 14.0) : -25.0;
+
+      if (this.fallTimer > 1.2 || this.position.y < dropThreshold) {
+        this.respawn();
+      }
+      return; // Skip normal track alignment while falling
+    }
+
+    // 2. Handle Status Timers (EMP, Spin, Boost)
     if (this.spinTimer > 0) {
       this.spinTimer -= delta;
       this.rotation.y += delta * 12.0; // Rapid spin out
@@ -115,7 +204,7 @@ export class VehiclePhysics {
 
     const currentMax = this.isBoosting ? (this.maxSpeed * 1.45) : (this.empTimer > 0 ? this.maxSpeed * 0.45 : this.maxSpeed);
 
-    // 2. Acceleration / Deceleration
+    // 3. Acceleration / Deceleration
     if (this.spinTimer <= 0) {
       if (this.throttleInput > 0) {
         const boostMultiplier = this.isBoosting ? 2.2 : 1.0;
@@ -141,9 +230,8 @@ export class VehiclePhysics {
       this.speed -= 40 * delta;
     }
 
-    // 3. Steering & Yaw Rotation
+    // 4. Steering & Yaw Rotation
     if (this.spinTimer <= 0) {
-      // Steer responsiveness depends on forward speed (can't turn when completely still)
       const speedFactor = Math.min(1.0, Math.abs(this.speed) / 35.0);
       const driftMultiplier = this.isDrifting ? 1.45 : 1.0;
       const turnDelta = -this.steerInput * this.turnSpeed * driftMultiplier * speedFactor * delta;
@@ -155,7 +243,7 @@ export class VehiclePhysics {
       this.steerAngle += (targetSteerAngle - this.steerAngle) * 12 * delta;
     }
 
-    // 4. Update Forward & Right Direction Vectors
+    // 5. Update Forward & Right Direction Vectors
     this.forward.set(
       -Math.sin(this.rotation.y),
       0,
@@ -168,13 +256,11 @@ export class VehiclePhysics {
       -this.forward.x
     ).normalize();
 
-    // 5. Velocity & Drift Mechanics
-    // Convert speed (km/h) to m/s: km/h / 3.6
+    // 6. Velocity & Drift Mechanics
     const forwardSpeedMS = (this.speed / 3.6);
     const targetVel = this.forward.clone().multiplyScalar(forwardSpeedMS);
 
     if (this.isDrifting) {
-      // Slip angle: retain portion of old lateral velocity
       this.velocity.lerp(targetVel, 6 * delta);
     } else {
       this.velocity.lerp(targetVel, 18 * delta);
@@ -183,12 +269,14 @@ export class VehiclePhysics {
     // Position step
     this.position.addScaledVector(this.velocity, delta);
 
-    // 6. Track Alignment & Guardrail Collision
+    // 7. Track Alignment & Edge Checking
     this.handleTrackPhysics(delta);
 
-    // 7. Checkpoints & Boost Pads
-    this.handleCheckpoints();
-    this.handleBoostPads();
+    // 8. Checkpoints & Boost Pads (only if not falling)
+    if (!this.isFalling) {
+      this.handleCheckpoints();
+      this.handleBoostPads();
+    }
   }
 
   handleTrackPhysics(delta) {
@@ -196,6 +284,23 @@ export class VehiclePhysics {
     this.trackT = this.closestTrack.t;
     const trackPt = this.closestTrack.point;
     const trackTan = this.closestTrack.tangent;
+
+    // Calculate horizontal distance from track centerline
+    const dx = this.position.x - trackPt.x;
+    const dz = this.position.z - trackPt.z;
+    const distToCenter = Math.sqrt(dx * dx + dz * dz);
+    const halfRoadWidth = this.track.roadWidth / 2; // 9.0
+
+    // Off-track check: road width is 18m (half = 9m). Allow small curb margin (+1.5m) before dropping off
+    if (distToCenter > halfRoadWidth + 1.5) {
+      this.isFalling = true;
+      this.fallVelocityY = -6.0;
+      this.fallTimer = 0.0;
+      return;
+    }
+
+    // On track or curb: record as safe track position
+    this.lastSafeT = this.trackT;
 
     // Track surface height with smooth suspension spring
     const targetY = trackPt.y;
@@ -209,25 +314,9 @@ export class VehiclePhysics {
     const lateralG = -this.steerInput * (this.speed / this.maxSpeed) * (this.isDrifting ? 0.35 : 0.18);
     this.rotation.z += (lateralG - this.rotation.z) * 8 * delta;
 
-    // Track Guardrail / Boundary collision
-    // Vector from track center to vehicle
-    const toVehicle = this.position.clone().sub(trackPt);
-    toVehicle.y = 0; // Horizontal plane distance
-    const distToCenter = toVehicle.length();
-    const maxTrackDistance = (this.track.roadWidth / 2) - 1.2;
-
-    if (distToCenter > maxTrackDistance) {
-      // Push back onto track
-      const pushDir = toVehicle.clone().normalize().negate();
-      const penetration = distToCenter - maxTrackDistance;
-      this.position.addScaledVector(pushDir.negate(), -penetration);
-
-      // Deflect velocity and damp speed on wall impact
-      this.speed *= 0.82;
-      this.velocity.multiplyScalar(0.85);
-
-      // Bounce impulse away from wall
-      this.velocity.addScaledVector(pushDir, 12);
+    // Curb edge rumble/friction when riding outside edge
+    if (distToCenter > halfRoadWidth - 0.5) {
+      this.speed *= 0.985;
     }
   }
 

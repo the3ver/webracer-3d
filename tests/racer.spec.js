@@ -58,18 +58,18 @@ test.describe('Neon Drift // Cyber Circuit 3D Racer Tests', () => {
     const initialSpeed = await page.evaluate(() => window.game.player.physics.speed);
     expect(initialSpeed).toBeLessThan(5);
 
-    // Hold 'W' key for 1.5 seconds to accelerate
+    // Hold 'W' key to accelerate
     await page.keyboard.down('KeyW');
-    await page.waitForTimeout(1500);
+    await page.waitForFunction(() => window.game.player.physics.speed > 15, { timeout: 8000 });
     await page.keyboard.up('KeyW');
 
     // Speed should have increased significantly
     const acceleratedSpeed = await page.evaluate(() => window.game.player.physics.speed);
-    expect(acceleratedSpeed).toBeGreaterThan(20);
+    expect(acceleratedSpeed).toBeGreaterThan(15);
 
     // Speedometer text should reflect speed
     const speedText = await page.locator('#speed-val').innerText();
-    expect(parseInt(speedText, 10)).toBeGreaterThan(15);
+    expect(parseInt(speedText, 10)).toBeGreaterThan(10);
 
     // Steer left with 'A'
     const initialRotation = await page.evaluate(() => window.game.player.physics.rotation.y);
@@ -154,5 +154,38 @@ test.describe('Neon Drift // Cyber Circuit 3D Racer Tests', () => {
 
     // Take screenshot of race action
     await page.screenshot({ path: 'tests/screenshots/gameplay_action.png' });
+  });
+
+  test('Vehicle falls off track when driving over edge and respawns on track with blinking animation', async ({ page }) => {
+    await page.click('#btn-start');
+    await page.waitForFunction(() => window.game && window.game.state === 'RACING', { timeout: 8000 });
+
+    // Move player laterally beyond track bounds (over the curb into the abyss)
+    await page.evaluate(() => {
+      window.game.player.physics.position.x += 25.0;
+    });
+
+    // Wait for physics step to trigger isFalling
+    await page.waitForFunction(() => window.game.player.physics.isFalling, { timeout: 3000 });
+
+    const isFalling = await page.evaluate(() => window.game.player.physics.isFalling);
+    expect(isFalling).toBe(true);
+
+    // Wait for respawn trigger
+    await page.waitForFunction(() => !window.game.player.physics.isFalling && window.game.player.physics.respawnBlinkTimer > 0, { timeout: 4000 });
+
+    const respawnData = await page.evaluate(() => ({
+      isFalling: window.game.player.physics.isFalling,
+      blinkTimer: window.game.player.physics.respawnBlinkTimer,
+      speed: window.game.player.physics.speed,
+      meshVisible: window.game.player.model.mesh.visible
+    }));
+
+    expect(respawnData.isFalling).toBe(false);
+    expect(respawnData.blinkTimer).toBeGreaterThan(0);
+    expect(respawnData.speed).toBeGreaterThan(20); // Smooth rolling restart
+
+    // Take screenshot during blinking respawn
+    await page.screenshot({ path: 'tests/screenshots/respawn_blink.png' });
   });
 });

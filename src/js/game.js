@@ -117,6 +117,19 @@ export class Game {
           colorHex: cfg.primary
         };
         this.player = vehicleObj;
+
+        physics.onRespawn = () => {
+          this.audioSynth.playRespawn();
+          if (this.centerMsg && this.state === 'RACING') {
+            this.centerMsg.innerText = 'RESPAWN';
+            this.centerMsg.style.color = '#00ffff';
+            setTimeout(() => {
+              if (this.centerMsg && this.centerMsg.innerText === 'RESPAWN') {
+                this.centerMsg.innerText = '';
+              }
+            }, 800);
+          }
+        };
       } else {
         const aiDriver = new AIDriver(cfg.name, physics, model, {
           skill: cfg.skill,
@@ -275,6 +288,13 @@ export class Game {
         v.physics.hasShield,
         v.physics.spinTimer > 0
       );
+
+      // Blinking animation on respawn recovery
+      if (v.physics.respawnBlinkTimer > 0) {
+        v.model.mesh.visible = Math.floor(v.physics.respawnBlinkTimer * 12) % 2 === 0;
+      } else {
+        v.model.mesh.visible = true;
+      }
     });
 
     // 5. Combat & Weapons Update

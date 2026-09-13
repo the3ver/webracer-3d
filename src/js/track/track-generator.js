@@ -4,7 +4,7 @@ export class TrackGenerator {
   constructor(scene) {
     this.scene = scene;
     this.roadWidth = 18;
-    this.wallHeight = 2.2;
+    this.wallHeight = 0.6;
     this.segments = 300;
 
     // Control points for varied 3D Synthwave Circuit (hills, chicanes, tunnel)
