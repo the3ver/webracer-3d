@@ -14,12 +14,12 @@ export class VehiclePhysics {
     this.quaternion = new THREE.Quaternion();
 
     // Tuning Parameters
-    this.maxSpeed = options.maxSpeed || 190.0;          // km/h
-    this.reverseMaxSpeed = 45.0;                      // km/h
-    this.accelerationRate = options.accel || 95.0;    // km/h per sec
-    this.brakingRate = 140.0;                         // km/h per sec
-    this.dragCoeff = 0.985;                           // natural slowing
-    this.turnSpeed = options.turnSpeed || 2.4;        // rad/sec
+    this.maxSpeed = options.maxSpeed || 140.0;          // km/h (smoother top speed)
+    this.reverseMaxSpeed = 35.0;                      // km/h
+    this.accelerationRate = options.accel || 45.0;    // km/h per sec (balanced, controllable acceleration)
+    this.brakingRate = 90.0;                          // km/h per sec
+    this.dragCoeff = 0.988;                           // natural slowing
+    this.turnSpeed = options.turnSpeed || 2.2;        // rad/sec
     this.driftGripFactor = 0.94;                      // lateral slip resistance
 
     // Current State
@@ -133,8 +133,8 @@ export class VehiclePhysics {
     const angle = Math.atan2(-forward.x, -forward.z);
     this.rotation.set(0, angle, 0);
 
-    // Rolling start speed (40 km/h) in forward direction
-    this.speed = 40.0;
+    // Rolling start speed (25 km/h) in forward direction
+    this.speed = 25.0;
     this.velocity.copy(this.forward).multiplyScalar(this.speed / 3.6);
 
     // Reset falling and status
@@ -202,12 +202,12 @@ export class VehiclePhysics {
       this.isBoosting = false;
     }
 
-    const currentMax = this.isBoosting ? (this.maxSpeed * 1.45) : (this.empTimer > 0 ? this.maxSpeed * 0.45 : this.maxSpeed);
+    const currentMax = this.isBoosting ? (this.maxSpeed * 1.35) : (this.empTimer > 0 ? this.maxSpeed * 0.45 : this.maxSpeed);
 
     // 3. Acceleration / Deceleration
     if (this.spinTimer <= 0) {
       if (this.throttleInput > 0) {
-        const boostMultiplier = this.isBoosting ? 2.2 : 1.0;
+        const boostMultiplier = this.isBoosting ? 1.6 : 1.0;
         const accel = (this.empTimer > 0 ? this.accelerationRate * 0.4 : this.accelerationRate) * boostMultiplier;
         this.speed += accel * this.throttleInput * delta;
       } else if (this.throttleInput < 0) {

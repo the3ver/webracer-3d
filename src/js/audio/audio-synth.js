@@ -74,7 +74,7 @@ export class AudioSynth {
     if (!this.ctx || !this.engineOsc1 || this.isMuted) return;
 
     // Modulate pitch from 60 Hz (idle) to 320 Hz (top speed)
-    const normSpeed = Math.min(1.0, Math.abs(speed) / 220);
+    const normSpeed = Math.min(1.0, Math.abs(speed) / 145);
     const targetFreq = 55 + (normSpeed * 220) + (isBoosting ? 60 : 0);
     const targetCutoff = 180 + (normSpeed * 1200) + (isBoosting ? 600 : 0);
 

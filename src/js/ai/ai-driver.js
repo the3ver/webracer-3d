@@ -56,12 +56,12 @@ export class AIDriver {
 
     // Slow down slightly on sharp hairpin turns (low dotForward)
     if (dotForward < 0.65) {
-      if (this.physics.speed > 110) {
+      if (this.physics.speed > 80) {
         throttle = 0.2;
         handbrake = true; // Initiate drift
       }
     } else if (dotForward < 0.85) {
-      if (this.physics.speed > 150) {
+      if (this.physics.speed > 105) {
         throttle = 0.6;
       }
     }
@@ -80,7 +80,7 @@ export class AIDriver {
 
     if (weapon === WEAPON_TYPES.NITRO) {
       // Fire Nitro on straights
-      if (this.physics.speed > 100 && Math.abs(this.physics.steerInput) < 0.2) {
+      if (this.physics.speed > 75 && Math.abs(this.physics.steerInput) < 0.2) {
         weaponManager.fireWeapon(this, weapon, allVehicles);
         this.weaponSlot = null;
         this.fireCooldown = 3.0;
