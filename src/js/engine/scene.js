@@ -15,8 +15,8 @@ export class SynthwaveScene {
   }
 
   buildLighting() {
-    // Ambient Light (deep magenta/purple base)
-    const ambientLight = new THREE.AmbientLight(0x381254, 1.5);
+    // Ambient Light (brighter magenta/purple base to lift dark shadows)
+    const ambientLight = new THREE.AmbientLight(0x5a2d80, 2.2);
     this.scene.add(ambientLight);
 
     // Directional Sunset Light
@@ -24,8 +24,13 @@ export class SynthwaveScene {
     sunLight.position.set(0, 80, -400);
     this.scene.add(sunLight);
 
-    // Hemispheric Light (Cyan top, Purple bottom)
-    const hemiLight = new THREE.HemisphereLight(0x00f3ff, 0x8a00ff, 1.2);
+    // Overhead Key Light for crisp car specular highlights and track surface depth
+    const overheadLight = new THREE.DirectionalLight(0xd4eaff, 2.0);
+    overheadLight.position.set(40, 150, 40);
+    this.scene.add(overheadLight);
+
+    // Hemispheric Light (Cyan sky top, Indigo ground bounce)
+    const hemiLight = new THREE.HemisphereLight(0x00f3ff, 0x4a186a, 1.4);
     this.scene.add(hemiLight);
   }
 

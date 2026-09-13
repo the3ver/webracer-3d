@@ -18,11 +18,11 @@ export class CarModel {
   }
 
   buildCar() {
-    // Main Chassis - Futuristic wedge supercar
+    // Main Chassis Material - Satin cyber metallic finish with distinct base color
     const chassisMat = new THREE.MeshStandardMaterial({
       color: this.bodyColor,
-      roughness: 0.25,
-      metalness: 0.85,
+      roughness: 0.38,
+      metalness: 0.60,
     });
 
     const neonPrimaryMat = new THREE.MeshBasicMaterial({
@@ -34,11 +34,11 @@ export class CarModel {
     });
 
     const glassMat = new THREE.MeshStandardMaterial({
-      color: 0x050510,
-      roughness: 0.1,
-      metalness: 0.95,
+      color: 0x0c223c,
+      roughness: 0.12,
+      metalness: 0.75,
       transparent: true,
-      opacity: 0.85
+      opacity: 0.92
     });
 
     // Lower Wedge Body
@@ -55,6 +55,21 @@ export class CarModel {
     nose.scale.set(1.4, 0.35, 1.0);
     nose.position.set(0, 0.42, -1.9);
     this.mesh.add(nose);
+
+    // High-Contrast Center Racing Stripes
+    const centerStripeGeo = new THREE.BoxGeometry(0.38, 0.04, 3.8);
+    const centerStripe = new THREE.Mesh(centerStripeGeo, neonPrimaryMat);
+    centerStripe.position.set(0, 0.69, -0.1);
+    this.mesh.add(centerStripe);
+
+    // Front Hood Dual Accent Accents
+    const hoodStripeL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 1.3), neonAccentMat);
+    hoodStripeL.position.set(-0.42, 0.58, -1.6);
+    this.mesh.add(hoodStripeL);
+
+    const hoodStripeR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.04, 1.3), neonAccentMat);
+    hoodStripeR.position.set(0.42, 0.58, -1.6);
+    this.mesh.add(hoodStripeR);
 
     // Front Neon Splitter Lip
     const splitterGeo = new THREE.BoxGeometry(2.1, 0.08, 0.8);

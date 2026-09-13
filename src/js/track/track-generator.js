@@ -9,8 +9,8 @@ export class TrackGenerator {
 
     // Control points for varied 3D Synthwave Circuit (hills, chicanes, tunnel)
     this.rawPoints = [
-      new THREE.Vector3(0, 0, 0),         // Start / Finish
-      new THREE.Vector3(0, 0, -120),      // Fast straight
+      new THREE.Vector3(0, 0, 0),         // Start / Finish (middle of 200m main straight)
+      new THREE.Vector3(0, 0, -120),      // Fast straight end
       new THREE.Vector3(40, 6, -220),     // Uphill entry
       new THREE.Vector3(120, 16, -280),   // High curve right
       new THREE.Vector3(220, 22, -260),   // Summit crest
@@ -25,8 +25,9 @@ export class TrackGenerator {
       new THREE.Vector3(-250, 0, 80),     // Back straight
       new THREE.Vector3(-270, 0, -40),    // Chicane left
       new THREE.Vector3(-230, 0, -110),   // Chicane right
-      new THREE.Vector3(-140, 0, -80),    // Final turn entry
-      new THREE.Vector3(-60, 0, -30),     // Main straight entry
+      new THREE.Vector3(-140, 0, -40),    // Final turn entry
+      new THREE.Vector3(-60, 0, 60),      // Final turn apex
+      new THREE.Vector3(0, 0, 70),        // Main straight entry
     ];
 
     // Closed 3D Catmull-Rom Spline
@@ -111,7 +112,9 @@ export class TrackGenerator {
       uniforms: {
         neonCyan: { value: new THREE.Color(0x00f3ff) },
         neonPink: { value: new THREE.Color(0xff007f) },
-        asphaltDark: { value: new THREE.Color(0x0a0a18) },
+        neonYellow: { value: new THREE.Color(0xffea00) },
+        asphaltDark: { value: new THREE.Color(0x181b34) }, // Distinct dark indigo tarmac
+        laneGuide: { value: new THREE.Color(0x303666) },   // Subtle inner lane markers
       },
       vertexShader: `
         varying vec2 vUv;
@@ -123,28 +126,40 @@ export class TrackGenerator {
       fragmentShader: `
         uniform vec3 neonCyan;
         uniform vec3 neonPink;
+        uniform vec3 neonYellow;
         uniform vec3 asphaltDark;
+        uniform vec3 laneGuide;
         varying vec2 vUv;
 
         void main() {
           // Center dashed neon cyan stripe
           float centerDist = abs(vUv.x - 0.5);
-          float isCenterLine = step(centerDist, 0.02) * step(0.5, fract(vUv.y * 1.5));
+          float isCenterLine = step(centerDist, 0.016) * step(0.45, fract(vUv.y * 1.5));
 
-          // Neon edges (Curbs: Cyan on left, Pink on right)
-          float leftEdge = step(vUv.x, 0.04);
-          float rightEdge = step(0.96, vUv.x);
+          // Inner lane dividing guides (at 25% and 75% track width)
+          float lane1 = step(abs(vUv.x - 0.25), 0.007) * step(0.6, fract(vUv.y * 3.0));
+          float lane2 = step(abs(vUv.x - 0.75), 0.007) * step(0.6, fract(vUv.y * 3.0));
 
-          // Subtle grid pattern on road
+          // Neon Checkered Curbs (Cyan/Yellow on Left, Magenta/Yellow on Right)
+          float leftEdge = step(vUv.x, 0.045);
+          float rightEdge = step(0.955, vUv.x);
+          float curbStripe = step(0.5, fract(vUv.y * 5.0));
+
+          // Grid pattern on asphalt for speed sensation and depth
           float grid = max(
-            step(0.95, fract(vUv.x * 12.0)),
-            step(0.95, fract(vUv.y * 3.0))
-          ) * 0.12;
+            step(0.95, fract(vUv.x * 12.0)) * 0.18,
+            step(0.95, fract(vUv.y * 3.0)) * 0.18
+          );
 
-          vec3 col = asphaltDark + vec3(grid);
-          col = mix(col, neonCyan, isCenterLine * 1.5);
-          col = mix(col, neonCyan, leftEdge * 1.8);
-          col = mix(col, neonPink, rightEdge * 1.8);
+          vec3 col = asphaltDark + vec3(grid * 0.5, grid * 0.6, grid * 1.0);
+          col = mix(col, laneGuide, (lane1 + lane2) * 0.9);
+          col = mix(col, neonCyan, isCenterLine * 1.7);
+
+          // Alternating Checkered Curbs
+          vec3 leftCurbCol = mix(neonCyan, neonYellow, curbStripe * 0.5);
+          vec3 rightCurbCol = mix(neonPink, neonYellow, curbStripe * 0.5);
+          col = mix(col, leftCurbCol, leftEdge * 1.8);
+          col = mix(col, rightCurbCol, rightEdge * 1.8);
 
           gl_FragColor = vec4(col, 1.0);
         }

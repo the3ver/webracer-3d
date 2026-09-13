@@ -75,10 +75,10 @@ export class Game {
   setupVehicles() {
     // Starting grid offsets behind start line
     const gridConfigs = [
-      { name: 'Player (You)', isPlayer: true, primary: 0x00ffff, accent: 0xff00ff, body: 0x0a1020, glow: 0x00ffff, lane: 2.5, t: 0.996, maxSpeed: 140, accel: 45 },
-      { name: 'Neon Phantom', isPlayer: false, primary: 0xff007f, accent: 0x00ffff, body: 0x1f081c, glow: 0xff007f, lane: -2.5, t: 0.992, skill: 0.9, aggression: 0.8, maxSpeed: 136, accel: 43 },
-      { name: 'Viper 2088', isPlayer: false, primary: 0xffea00, accent: 0xff0055, body: 0x1c1908, glow: 0xffea00, lane: 2.5, t: 0.988, skill: 0.82, aggression: 0.65, maxSpeed: 132, accel: 40 },
-      { name: 'Cyber Blade', isPlayer: false, primary: 0x00ff66, accent: 0x00aaff, body: 0x081c10, glow: 0x00ff66, lane: -2.5, t: 0.984, skill: 0.78, aggression: 0.75, maxSpeed: 130, accel: 38 },
+      { name: 'Player (You)', isPlayer: true, primary: 0x00ffff, accent: 0xff00ff, body: 0x22365a, glow: 0x00ffff, lane: 2.5, t: 0.996, maxSpeed: 140, accel: 45 },
+      { name: 'Neon Phantom', isPlayer: false, primary: 0xff007f, accent: 0x00ffff, body: 0x4a1842, glow: 0xff007f, lane: -2.5, t: 0.992, skill: 0.9, aggression: 0.8, maxSpeed: 136, accel: 43 },
+      { name: 'Viper 2088', isPlayer: false, primary: 0xffea00, accent: 0xff0055, body: 0x443a12, glow: 0xffea00, lane: 2.5, t: 0.988, skill: 0.82, aggression: 0.65, maxSpeed: 132, accel: 40 },
+      { name: 'Cyber Blade', isPlayer: false, primary: 0x00ff66, accent: 0x00aaff, body: 0x144428, glow: 0x00ff66, lane: -2.5, t: 0.984, skill: 0.78, aggression: 0.75, maxSpeed: 130, accel: 38 },
     ];
 
     gridConfigs.forEach((cfg) => {
@@ -153,6 +153,7 @@ export class Game {
   }
 
   startRace() {
+    if (this.state === 'COUNTDOWN' || this.state === 'RACING') return;
     this.audioSynth.init();
     if (this.overlay) {
       this.overlay.classList.add('hidden');

@@ -251,9 +251,9 @@ export class VehiclePhysics {
     ).normalize();
 
     this.right.set(
-      this.forward.z,
+      -this.forward.z,
       0,
-      -this.forward.x
+      this.forward.x
     ).normalize();
 
     // 6. Velocity & Drift Mechanics

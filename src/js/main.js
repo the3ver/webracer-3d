@@ -8,6 +8,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const btnStart = document.getElementById('btn-start');
   if (btnStart) {
     btnStart.addEventListener('click', () => {
+      btnStart.blur();
       game.startRace();
     });
   }
