@@ -55,6 +55,7 @@ body, html {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 16px;
 }
 
 .hud-bottom {
@@ -72,6 +73,25 @@ body, html {
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(4px);
+  box-sizing: border-box;
+}
+
+#pos-box {
+  min-width: 140px;
+  align-items: center;
+  text-align: center;
+}
+
+#lap-box {
+  min-width: 140px;
+  align-items: center;
+  text-align: center;
+}
+
+#time-box {
+  min-width: 220px;
+  align-items: center;
+  text-align: center;
 }
 
 .hud-label {
@@ -80,6 +100,7 @@ body, html {
   color: var(--neon-cyan);
   text-shadow: 0 0 8px var(--neon-cyan);
   margin-bottom: 4px;
+  text-align: center;
 }
 
 .hud-value {
@@ -87,6 +108,11 @@ body, html {
   font-weight: 900;
   color: #fff;
   text-shadow: 0 0 10px #fff;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+  letter-spacing: 1.5px;
+  display: inline-block;
+  text-align: center;
 }
 
 .hud-value small {
@@ -111,6 +137,8 @@ body, html {
   font-weight: 900;
   color: var(--neon-yellow);
   text-shadow: 0 0 15px var(--neon-yellow);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 .speed-unit {

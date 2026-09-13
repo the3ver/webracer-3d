@@ -241,19 +241,41 @@ export class CarModel {
   }
 
   buildShield() {
-    // Energy Shield Bubble (octahedron / icosphere with neon grid wireframe)
-    const shieldGeo = new THREE.IcosahedronGeometry(2.8, 2);
-    const shieldMat = new THREE.MeshBasicMaterial({
-      color: 0x00ffff,
+    // Energy Shield - Closely contoured aerodynamic cyber hull
+    this.shieldGroup = new THREE.Group();
+    this.shieldGroup.position.set(0, 0.62, -0.1);
+
+    // Contoured base geometry scaled to closely fit car silhouette
+    const shieldGeo = new THREE.IcosahedronGeometry(1.0, 2);
+
+    // Outer neon wireframe grid layer
+    this.shieldWireMat = new THREE.MeshBasicMaterial({
+      color: 0x00f3ff,
       wireframe: true,
       transparent: true,
       opacity: 0.0,
       blending: THREE.AdditiveBlending
     });
-    this.shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
-    this.shieldMesh.position.y = 0.6;
-    this.mesh.add(this.shieldMesh);
-    this.shieldMat = shieldMat;
+    const outerMesh = new THREE.Mesh(shieldGeo, this.shieldWireMat);
+
+    // Inner glowing energy membrane layer
+    this.shieldInnerMat = new THREE.MeshBasicMaterial({
+      color: 0x0088ff,
+      transparent: true,
+      opacity: 0.0,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
+    });
+    const innerMesh = new THREE.Mesh(shieldGeo, this.shieldInnerMat);
+    innerMesh.scale.set(0.97, 0.97, 0.97);
+
+    this.shieldGroup.add(outerMesh);
+    this.shieldGroup.add(innerMesh);
+    this.shieldGroup.scale.set(1.24, 0.68, 2.45);
+    this.shieldGroup.visible = false;
+
+    this.mesh.add(this.shieldGroup);
+    this.shieldMesh = this.shieldGroup; // Backwards compatibility
   }
 
   update(delta, speed, steerAngle, isBraking, isBoosting, hasShield, isSpun) {
@@ -290,13 +312,22 @@ export class CarModel {
       flame.visible = Math.abs(speed) > 5 || isBoosting;
     });
 
-    // 5. Shield visual effect
+    // 5. Shield visual effect (aerodynamic breathing aura snugly wrapping the car)
     if (hasShield) {
-      this.shieldMesh.visible = true;
-      this.shieldMat.opacity = 0.55 + Math.sin(Date.now() * 0.01) * 0.25;
-      this.shieldMesh.rotation.y += delta * 1.5;
+      this.shieldGroup.visible = true;
+      const shieldPulse = Math.sin(Date.now() * 0.008);
+      const baseSX = 1.24;
+      const baseSY = 0.68;
+      const baseSZ = 2.45;
+      this.shieldGroup.scale.set(
+        baseSX * (1.0 + shieldPulse * 0.02),
+        baseSY * (1.0 + shieldPulse * 0.02),
+        baseSZ * (1.0 + shieldPulse * 0.015)
+      );
+      this.shieldWireMat.opacity = 0.60 + shieldPulse * 0.20;
+      this.shieldInnerMat.opacity = 0.18 + shieldPulse * 0.07;
     } else {
-      this.shieldMesh.visible = false;
+      this.shieldGroup.visible = false;
     }
 
     // 6. Underglow pulse

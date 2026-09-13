@@ -259,6 +259,85 @@ export class AudioSynth {
     osc.stop(now + 0.4);
   }
 
+  playSnare(now, volume = 0.22) {
+    if (!this.ctx || this.isMuted) return;
+
+    // 1. Gated Noise Body (80s LinnDrum / Simmons synthwave gated reverb character)
+    const noiseDuration = 0.20;
+    const bufferSize = Math.floor(this.ctx.sampleRate * noiseDuration);
+    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.12));
+    }
+
+    const noiseSource = this.ctx.createBufferSource();
+    noiseSource.buffer = noiseBuffer;
+
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = 'bandpass';
+    noiseFilter.frequency.setValueAtTime(2400, now);
+    noiseFilter.Q.setValueAtTime(1.8, now);
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(volume * 1.2, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + noiseDuration);
+
+    noiseSource.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.masterGain);
+
+    noiseSource.start(now);
+    noiseSource.stop(now + noiseDuration);
+
+    // 2. Tonal Membrane Strike Punch (fast pitch sweep)
+    const toneOsc = this.ctx.createOscillator();
+    const toneGain = this.ctx.createGain();
+
+    toneOsc.type = 'triangle';
+    toneOsc.frequency.setValueAtTime(240, now);
+    toneOsc.frequency.exponentialRampToValueAtTime(85, now + 0.08);
+
+    toneGain.gain.setValueAtTime(volume * 0.9, now);
+    toneGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+    toneOsc.connect(toneGain);
+    toneGain.connect(this.masterGain);
+
+    toneOsc.start(now);
+    toneOsc.stop(now + 0.09);
+  }
+
+  playHiHat(now, volume = 0.04) {
+    if (!this.ctx || this.isMuted) return;
+
+    const hatDuration = 0.035;
+    const bufferSize = Math.floor(this.ctx.sampleRate * hatDuration);
+    const buf = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = buf;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'highpass';
+    filter.frequency.setValueAtTime(7500, now);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + hatDuration);
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.masterGain);
+
+    src.start(now);
+    src.stop(now + hatDuration);
+  }
+
   startSynthwaveBGM() {
     if (!this.ctx || this.musicPlaying) return;
     this.musicPlaying = true;
@@ -305,20 +384,17 @@ export class AudioSynth {
         osc.start(now);
         osc.stop(now + stepTime);
 
-        // Cyber Snare on beats 4 & 12
+        // Classic 80s Synthwave Backbeat Snare on beats 4 & 12 (2 & 4 in 4/4 time)
         if (step === 4 || step === 12) {
-          const snareOsc = this.ctx.createOscillator();
-          const snareGain = this.ctx.createGain();
-          snareOsc.type = 'triangle';
-          snareOsc.frequency.setValueAtTime(180, now);
-          snareOsc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
-          snareGain.gain.setValueAtTime(0.15, now);
-          snareGain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+          this.playSnare(now, 0.22);
+        } else if (step === 15 && chordIdx === chords.length - 1) {
+          // Snappy 16th-note snare fill at the end of the 4-bar chord loop
+          this.playSnare(now, 0.15);
+        }
 
-          snareOsc.connect(snareGain);
-          snareGain.connect(this.masterGain);
-          snareOsc.start(now);
-          snareOsc.stop(now + 0.1);
+        // Subtle closed hi-hat on odd 16th steps (syncopated groove)
+        if (step % 2 === 1 && step !== 15) {
+          this.playHiHat(now, 0.04);
         }
       }
 

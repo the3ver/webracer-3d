@@ -23,11 +23,13 @@ export class TrackGenerator {
       new THREE.Vector3(-60, 4, 210),     // Tunnel exit
       new THREE.Vector3(-180, 0, 170),    // Sweeping left turn
       new THREE.Vector3(-250, 0, 80),     // Back straight
-      new THREE.Vector3(-270, 0, -40),    // Chicane left
-      new THREE.Vector3(-230, 0, -110),   // Chicane right
-      new THREE.Vector3(-140, 0, -40),    // Final turn entry
-      new THREE.Vector3(-60, 0, 60),      // Final turn apex
-      new THREE.Vector3(0, 0, 70),        // Main straight entry
+      new THREE.Vector3(-260, 0, -10),    // Chicane entry (smooth transition)
+      new THREE.Vector3(-220, 0, -70),    // Chicane apex (smooth arc)
+      new THREE.Vector3(-150, 0, -45),    // Chicane exit
+      new THREE.Vector3(-90, 0, 15),      // Final turn entry
+      new THREE.Vector3(-45, 0, 45),      // Final turn mid
+      new THREE.Vector3(-10, 0, 35),      // Final turn exit
+      new THREE.Vector3(0, 0, 15),        // Main straight aligner
     ];
 
     // Closed 3D Catmull-Rom Spline

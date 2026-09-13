@@ -24,7 +24,8 @@ export class VehiclePhysics {
 
     // Current State
     this.speed = 0.0;                                 // Current forward speed in km/h
-    this.steerInput = 0.0;                            // -1 (left) to +1 (right)
+    this.targetSteerInput = 0.0;                      // Target steer input (-1 to +1)
+    this.steerInput = 0.0;                            // Smoothed current steer input (-1 to +1)
     this.steerAngle = 0.0;                            // visual steer angle of front wheels
     this.throttleInput = 0.0;                         // -1 (reverse/brake) to +1 (gas)
     this.isDrifting = false;
@@ -74,18 +75,21 @@ export class VehiclePhysics {
     this.fallVelocityY = 0.0;
     this.fallTimer = 0.0;
     this.respawnBlinkTimer = 0.0;
+    this.targetSteerInput = 0.0;
+    this.steerInput = 0.0;
   }
 
   setInputs(throttle, steer, handbrake) {
     if (this.isFalling) {
       this.throttleInput = 0;
+      this.targetSteerInput = 0;
       this.steerInput = 0;
       this.isDrifting = false;
       this.isBraking = false;
       return;
     }
     this.throttleInput = throttle;
-    this.steerInput = steer;
+    this.targetSteerInput = steer;
     this.isDrifting = handbrake;
     this.isBraking = throttle < 0 && this.speed > 5;
   }
@@ -137,12 +141,13 @@ export class VehiclePhysics {
     this.speed = 25.0;
     this.velocity.copy(this.forward).multiplyScalar(this.speed / 3.6);
 
-    // Reset falling and status
     this.isFalling = false;
     this.fallVelocityY = 0.0;
     this.fallTimer = 0.0;
     this.spinTimer = 0.0;
     this.empTimer = 0.0;
+    this.targetSteerInput = 0.0;
+    this.steerInput = 0.0;
     this.respawnBlinkTimer = 2.0; // 2 seconds of blinking invulnerability animation
 
     if (this.onRespawn) {
@@ -232,9 +237,29 @@ export class VehiclePhysics {
 
     // 4. Steering & Yaw Rotation
     if (this.spinTimer <= 0) {
+      // Smooth steering input ramp (prevents digital keyboard instant full-lock snapping)
+      if (this.targetSteerInput !== 0) {
+        const steerRampRate = 4.2; // ~0.24s to reach full lock from center
+        if (this.steerInput < this.targetSteerInput) {
+          this.steerInput = Math.min(this.targetSteerInput, this.steerInput + steerRampRate * delta);
+        } else {
+          this.steerInput = Math.max(this.targetSteerInput, this.steerInput - steerRampRate * delta);
+        }
+      } else {
+        // Rapid return to center when steering key is released
+        const returnRate = 7.5;
+        if (Math.abs(this.steerInput) <= returnRate * delta) {
+          this.steerInput = 0;
+        } else {
+          this.steerInput -= Math.sign(this.steerInput) * returnRate * delta;
+        }
+      }
+
       const speedFactor = Math.min(1.0, Math.abs(this.speed) / 35.0);
+      // High-speed damping for stable, controllable straightaway corrections
+      const highSpeedDamping = Math.max(0.75, 1.0 - (Math.abs(this.speed) / this.maxSpeed) * 0.25);
       const driftMultiplier = this.isDrifting ? 1.45 : 1.0;
-      const turnDelta = -this.steerInput * this.turnSpeed * driftMultiplier * speedFactor * delta;
+      const turnDelta = -this.steerInput * this.turnSpeed * driftMultiplier * speedFactor * highSpeedDamping * delta;
 
       this.rotation.y += turnDelta;
 

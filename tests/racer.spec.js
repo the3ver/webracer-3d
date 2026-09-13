@@ -188,4 +188,32 @@ test.describe('Neon Drift // Cyber Circuit 3D Racer Tests', () => {
     // Take screenshot during blinking respawn
     await page.screenshot({ path: 'tests/screenshots/respawn_blink.png' });
   });
+
+  test('Vehicle activates contoured Energy Shield and renders snug aerodynamic cocoon', async ({ page }) => {
+    await page.click('#btn-start');
+    await page.waitForFunction(() => window.game && window.game.state === 'RACING', { timeout: 8000 });
+
+    // Activate Energy Shield
+    await page.evaluate(() => {
+      window.game.player.physics.hasShield = true;
+      window.game.weaponManager.audioSynth.playShield();
+    });
+
+    await page.waitForTimeout(500);
+
+    const shieldState = await page.evaluate(() => ({
+      hasShield: window.game.player.physics.hasShield,
+      shieldVisible: window.game.player.model.shieldGroup.visible,
+      scaleX: window.game.player.model.shieldGroup.scale.x,
+      scaleZ: window.game.player.model.shieldGroup.scale.z
+    }));
+
+    expect(shieldState.hasShield).toBe(true);
+    expect(shieldState.shieldVisible).toBe(true);
+    expect(shieldState.scaleX).toBeGreaterThan(1.1);
+    expect(shieldState.scaleZ).toBeGreaterThan(2.3);
+
+    // Save screenshot of aerodynamic energy shield
+    await page.screenshot({ path: 'tests/screenshots/energy_shield.png' });
+  });
 });

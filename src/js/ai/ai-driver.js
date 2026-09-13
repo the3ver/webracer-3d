@@ -27,28 +27,63 @@ export class AIDriver {
 
     if (this.fireCooldown > 0) this.fireCooldown -= delta;
 
-    // 1. Dynamic Speed-Based Lookahead
-    const speedRatio = Math.min(1.0, Math.max(0.1, this.physics.speed / 140));
-    const lookaheadT = THREE.MathUtils.clamp(0.018 + speedRatio * 0.022, 0.018, 0.04);
-
+    // 1. Tangent-based Curvature Lookahead & Cornering Speed
     const currentT = this.physics.trackT;
+    const speed = this.physics.speed;
+
+    const tanNow = track.getTrackTransformAt(currentT).tangent.clone().setY(0).normalize();
+    const tanNear = track.getTrackTransformAt((currentT + 0.035) % 1.0).tangent.clone().setY(0).normalize();
+    const tanFar = track.getTrackTransformAt((currentT + 0.070) % 1.0).tangent.clone().setY(0).normalize();
+
+    const dotNear = tanNow.dot(tanNear);
+    const dotFar = tanNow.dot(tanFar);
+    const minDot = Math.min(dotNear, dotFar);
+
+    // Calculate safe cornering target speed
+    let targetSpeed = this.physics.maxSpeed;
+    if (minDot < 0.45) {
+      targetSpeed = 65; // tight hairpin
+    } else if (minDot < 0.72) {
+      targetSpeed = 82; // sharp curve
+    } else if (minDot < 0.88) {
+      targetSpeed = 105; // medium turn
+    }
+
+    // 2. Throttle & Braking Control
+    let throttle = 1.0;
+    let handbrake = false;
+
+    if (speed > targetSpeed + 4) {
+      throttle = -1.0; // Early, decisive braking before curve
+    } else if (speed > targetSpeed) {
+      throttle = 0.2; // Coasting into apex
+    }
+
+    // Centerline and road distance check
+    const currentCenter = track.getTrackTransformAt(currentT).position;
+    const toCenter = currentCenter.clone().sub(this.physics.position);
+    toCenter.y = 0;
+    const distFromCenter = toCenter.length();
+
+    // Controlled handbrake drift only on sharp hairpins with safe margin
+    if (minDot < 0.5 && speed > 55 && speed < 80 && distFromCenter < 2.0) {
+      handbrake = true;
+    }
+
+    // 3. Dynamic Steering with Lateral Recovery
+    const lookaheadT = THREE.MathUtils.clamp(0.015 + (speed / 140) * 0.02, 0.015, 0.032);
     const targetT = (currentT + lookaheadT) % 1.0;
     const targetInfo = track.getTrackTransformAt(targetT);
 
     // Calculate lateral lane offset (racing line)
     const targetPt = targetInfo.position.clone();
-    const tangent = targetInfo.tangent.clone().normalize();
-    const up = new THREE.Vector3(0, 1, 0);
-    const binormal = new THREE.Vector3().crossVectors(tangent, up).normalize();
+    const tangent = targetInfo.tangent.clone().setY(0).normalize();
+    const binormal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
     targetPt.addScaledVector(binormal, this.personality.laneOffset);
 
-    // Centerline Recovery: If AI is too close to track edge, pull target back to center
-    const currentCenter = track.getTrackTransformAt(currentT).position;
-    const toCenter = currentCenter.clone().sub(this.physics.position);
-    toCenter.y = 0;
-    const distFromCenter = toCenter.length();
-    if (distFromCenter > 3.0) {
-      targetPt.lerp(currentCenter, 0.55);
+    // Centerline Recovery: Pull target back to center if drifting wide
+    if (distFromCenter > 2.2) {
+      targetPt.lerp(currentCenter, 0.6);
     }
 
     // Direction to target point
@@ -57,27 +92,10 @@ export class AIDriver {
     toTarget.normalize();
 
     const forward = this.physics.forward;
-    const dotForward = forward.dot(toTarget);
 
     // Invariant 2D Cross Product for Steering (+ right, - left)
     const cross = forward.x * toTarget.z - forward.z * toTarget.x;
-    let steer = THREE.MathUtils.clamp(cross * 3.5 * this.personality.skill, -1.0, 1.0);
-
-    // 2. Throttle & Drift Control
-    let throttle = 1.0;
-    let handbrake = false;
-
-    // Anticipate upcoming sharp curves
-    if (dotForward < 0.72) {
-      throttle = 0.25;
-      if (this.physics.speed > 75) {
-        handbrake = true; // Controlled drift through hairpins
-      }
-    } else if (dotForward < 0.88) {
-      if (this.physics.speed > 105) {
-        throttle = 0.6;
-      }
-    }
+    let steer = THREE.MathUtils.clamp(cross * 4.0 * this.personality.skill, -1.0, 1.0);
 
     // Apply inputs to physics
     this.physics.setInputs(throttle, steer, handbrake);
