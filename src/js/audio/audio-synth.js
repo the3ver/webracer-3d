@@ -4,6 +4,17 @@ export class AudioSynth {
     this.isMuted = false;
     this.musicPlaying = false;
 
+    // Volume settings (persisted in localStorage)
+    const savedMusic = typeof localStorage !== 'undefined' ? localStorage.getItem('webracer_music_vol') : null;
+    const savedSfx = typeof localStorage !== 'undefined' ? localStorage.getItem('webracer_sfx_vol') : null;
+    this.musicVolume = savedMusic !== null ? parseFloat(savedMusic) : 0.65;
+    this.sfxVolume = savedSfx !== null ? parseFloat(savedSfx) : 0.80;
+
+    // Master & Sub-Gain nodes
+    this.masterGain = null;
+    this.musicGain = null;
+    this.sfxGain = null;
+
     // Engine sound nodes
     this.engineGain = null;
     this.engineOsc1 = null;
@@ -12,7 +23,6 @@ export class AudioSynth {
 
     // Music timer
     this.bgmTimer = null;
-    this.masterGain = null;
   }
 
   init() {
@@ -21,9 +31,20 @@ export class AudioSynth {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AudioContext();
 
+      // Master Gain -> Destination
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.4;
+      this.masterGain.gain.value = 0.5;
       this.masterGain.connect(this.ctx.destination);
+
+      // Music Sub-Gain -> Master
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.value = this.musicVolume;
+      this.musicGain.connect(this.masterGain);
+
+      // SFX Sub-Gain -> Master
+      this.sfxGain = this.ctx.createGain();
+      this.sfxGain.gain.value = this.sfxVolume;
+      this.sfxGain.connect(this.masterGain);
 
       this.initEngineSynth();
       this.startSynthwaveBGM();
@@ -32,10 +53,38 @@ export class AudioSynth {
     }
   }
 
+  setMusicVolume(vol) {
+    this.musicVolume = Math.max(0, Math.min(1, vol));
+    if (this.musicGain && this.ctx) {
+      this.musicGain.gain.setTargetAtTime(this.musicVolume, this.ctx.currentTime, 0.02);
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('webracer_music_vol', this.musicVolume.toString());
+    }
+  }
+
+  setSfxVolume(vol) {
+    this.sfxVolume = Math.max(0, Math.min(1, vol));
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setTargetAtTime(this.sfxVolume, this.ctx.currentTime, 0.02);
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('webracer_sfx_vol', this.sfxVolume.toString());
+    }
+  }
+
+  getMusicVolume() {
+    return this.musicVolume;
+  }
+
+  getSfxVolume() {
+    return this.sfxVolume;
+  }
+
   toggleMute() {
     this.isMuted = !this.isMuted;
-    if (this.masterGain) {
-      this.masterGain.gain.setValueAtTime(this.isMuted ? 0 : 0.4, this.ctx.currentTime);
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 0.5, this.ctx.currentTime, 0.02);
     }
     return this.isMuted;
   }
@@ -64,7 +113,7 @@ export class AudioSynth {
     this.engineOsc1.connect(this.engineFilter);
     this.engineOsc2.connect(this.engineFilter);
     this.engineFilter.connect(this.engineGain);
-    this.engineGain.connect(this.masterGain);
+    this.engineGain.connect(this.sfxGain);
 
     this.engineOsc1.start();
     this.engineOsc2.start();
@@ -101,7 +150,7 @@ export class AudioSynth {
       gain.gain.setValueAtTime(0.3, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.sfxGain);
       osc.start(now);
       osc.stop(now + 0.3);
     } else if (type === 'emp') {
@@ -111,7 +160,7 @@ export class AudioSynth {
       gain.gain.setValueAtTime(0.35, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.sfxGain);
       osc.start(now);
       osc.stop(now + 0.35);
     } else if (type === 'mine') {
@@ -121,7 +170,7 @@ export class AudioSynth {
       gain.gain.setValueAtTime(0.25, now);
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.sfxGain);
       osc.start(now);
       osc.stop(now + 0.2);
     }
@@ -153,7 +202,7 @@ export class AudioSynth {
 
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain);
 
     noise.start(now);
   }
@@ -172,7 +221,7 @@ export class AudioSynth {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain);
     osc.start(now);
     osc.stop(now + 0.5);
   }
@@ -191,7 +240,7 @@ export class AudioSynth {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain);
     osc.start(now);
     osc.stop(now + 0.35);
   }
@@ -213,7 +262,7 @@ export class AudioSynth {
       gain.gain.exponentialRampToValueAtTime(0.01, noteTime + 0.12);
 
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.sfxGain);
       osc.start(noteTime);
       osc.stop(noteTime + 0.12);
     });
@@ -234,7 +283,7 @@ export class AudioSynth {
       gain.gain.exponentialRampToValueAtTime(0.01, noteTime + 0.25);
 
       osc.connect(gain);
-      gain.connect(this.masterGain);
+      gain.connect(this.sfxGain);
       osc.start(noteTime);
       osc.stop(noteTime + 0.25);
     });
@@ -254,7 +303,7 @@ export class AudioSynth {
     gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
 
     osc.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.sfxGain);
     osc.start(now);
     osc.stop(now + 0.4);
   }
@@ -285,7 +334,7 @@ export class AudioSynth {
 
     noiseSource.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
-    noiseGain.connect(this.masterGain);
+    noiseGain.connect(this.musicGain);
 
     noiseSource.start(now);
     noiseSource.stop(now + noiseDuration);
@@ -302,7 +351,7 @@ export class AudioSynth {
     toneGain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
 
     toneOsc.connect(toneGain);
-    toneGain.connect(this.masterGain);
+    toneGain.connect(this.musicGain);
 
     toneOsc.start(now);
     toneOsc.stop(now + 0.09);
@@ -332,7 +381,7 @@ export class AudioSynth {
 
     src.connect(filter);
     filter.connect(gain);
-    gain.connect(this.masterGain);
+    gain.connect(this.musicGain);
 
     src.start(now);
     src.stop(now + hatDuration);
@@ -379,7 +428,7 @@ export class AudioSynth {
 
         osc.connect(filter);
         filter.connect(gain);
-        gain.connect(this.masterGain);
+        gain.connect(this.musicGain);
 
         osc.start(now);
         osc.stop(now + stepTime);

@@ -27,8 +27,12 @@ export class Game {
     this.weaponIcon = document.getElementById('weapon-icon');
     this.centerMsg = document.getElementById('center-message');
     this.overlay = document.getElementById('overlay-screen');
+    this.settingsModal = document.getElementById('settings-modal');
     this.radarCanvas = document.getElementById('radar-canvas');
     this.radarCtx = this.radarCanvas ? this.radarCanvas.getContext('2d') : null;
+
+    this.isSettingsOpen = false;
+    this.isPaused = false;
 
     // Subsystems
     this.audioSynth = new AudioSynth();
@@ -162,8 +166,58 @@ export class Game {
     this.countdownTimer = 3.99;
   }
 
+  openSettings() {
+    this.isSettingsOpen = true;
+    if (this.settingsModal) {
+      this.settingsModal.classList.remove('hidden');
+    }
+    if (this.state === 'RACING') {
+      this.isPaused = true;
+    }
+    this.syncSettingsUI();
+  }
+
+  closeSettings() {
+    this.isSettingsOpen = false;
+    if (this.settingsModal) {
+      this.settingsModal.classList.add('hidden');
+    }
+    this.isPaused = false;
+  }
+
+  toggleSettings() {
+    if (this.isSettingsOpen) {
+      this.closeSettings();
+    } else {
+      this.openSettings();
+    }
+  }
+
+  syncSettingsUI() {
+    const sliderMusic = document.getElementById('slider-music-vol');
+    const sliderSfx = document.getElementById('slider-sfx-vol');
+    const txtMusic = document.getElementById('music-vol-val');
+    const txtSfx = document.getElementById('sfx-vol-val');
+    const btnMute = document.getElementById('btn-toggle-mute-modal');
+
+    const mVol = Math.round(this.audioSynth.getMusicVolume() * 100);
+    const sVol = Math.round(this.audioSynth.getSfxVolume() * 100);
+
+    if (sliderMusic) sliderMusic.value = mVol;
+    if (sliderSfx) sliderSfx.value = sVol;
+    if (txtMusic) txtMusic.innerText = `${mVol}%`;
+    if (txtSfx) txtSfx.innerText = `${sVol}%`;
+    if (btnMute) btnMute.innerText = this.audioSynth.isMuted ? 'TON: STUMM [M]' : 'TON: AN [M]';
+  }
+
   handleKeyDown(e) {
     const key = e.key.toLowerCase();
+
+    if (key === 'escape' || key === 'p') {
+      this.toggleSettings();
+      return;
+    }
+
     if (key === 'w' || key === 'arrowup') this.keys.up = true;
     if (key === 's' || key === 'arrowdown') this.keys.down = true;
     if (key === 'a' || key === 'arrowleft') this.keys.left = true;
@@ -184,6 +238,7 @@ export class Game {
 
     if (key === 'm') {
       this.audioSynth.toggleMute();
+      this.syncSettingsUI();
     }
   }
 
@@ -197,6 +252,8 @@ export class Game {
   }
 
   update(delta) {
+    if (this.isPaused) return;
+
     const time = this.clock.getElapsedTime();
 
     // 1. Countdown Logic

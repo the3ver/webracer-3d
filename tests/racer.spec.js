@@ -216,4 +216,51 @@ test.describe('Neon Drift // Cyber Circuit 3D Racer Tests', () => {
     // Save screenshot of aerodynamic energy shield
     await page.screenshot({ path: 'tests/screenshots/energy_shield.png' });
   });
+
+  test('Settings menu opens, adjusts Music and SFX volume separately, and pauses race', async ({ page }) => {
+    // 1. Open settings from start screen
+    await page.click('#btn-settings-start');
+    const isModalVisible = await page.locator('#settings-modal').isVisible();
+    expect(isModalVisible).toBe(true);
+
+    // Save screenshot of settings modal
+    await page.screenshot({ path: 'tests/screenshots/settings_menu.png' });
+
+    // 2. Adjust Music volume slider to 40%
+    await page.fill('#slider-music-vol', '40');
+    await page.dispatchEvent('#slider-music-vol', 'input');
+    const musicText = await page.locator('#music-vol-val').innerText();
+    expect(musicText).toBe('40%');
+    const musicVol = await page.evaluate(() => window.game.audioSynth.getMusicVolume());
+    expect(musicVol).toBeCloseTo(0.4, 2);
+
+    // 3. Adjust SFX volume slider to 90%
+    await page.fill('#slider-sfx-vol', '90');
+    await page.dispatchEvent('#slider-sfx-vol', 'input');
+    const sfxText = await page.locator('#sfx-vol-val').innerText();
+    expect(sfxText).toBe('90%');
+    const sfxVol = await page.evaluate(() => window.game.audioSynth.getSfxVolume());
+    expect(sfxVol).toBeCloseTo(0.9, 2);
+
+    // 4. Close settings modal
+    await page.click('#btn-close-settings');
+    const isHiddenAfterClose = await page.evaluate(() => document.getElementById('settings-modal').classList.contains('hidden'));
+    expect(isHiddenAfterClose).toBe(true);
+
+    // 5. Start race and test Escape key toggle and game pause
+    await page.click('#btn-start');
+    await page.waitForFunction(() => window.game && window.game.state === 'RACING', { timeout: 8000 });
+
+    // Press Escape to pause and open settings
+    await page.keyboard.press('Escape');
+    const isPaused = await page.evaluate(() => window.game.isPaused);
+    const isModalOpenInRace = await page.locator('#settings-modal').isVisible();
+    expect(isPaused).toBe(true);
+    expect(isModalOpenInRace).toBe(true);
+
+    // Press Escape to unpause and resume race
+    await page.keyboard.press('Escape');
+    const isPausedAfterResume = await page.evaluate(() => window.game.isPaused);
+    expect(isPausedAfterResume).toBe(false);
+  });
 });

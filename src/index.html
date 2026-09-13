@@ -59,6 +59,9 @@
       <div id="radar-container">
         <canvas id="radar-canvas" width="160" height="160"></canvas>
       </div>
+
+      <!-- Settings HUD Button -->
+      <button id="btn-settings-hud" class="hud-btn-icon" title="Einstellungen (ESC / P)">⚙️</button>
     </div>
 
     <!-- Start / Pause Screen -->
@@ -74,9 +77,46 @@
           <div class="control-row"><span>WAFFE ABFEUERN:</span><strong>F oder ENTER</strong></div>
           <div class="control-row"><span>KAMERA WECHSELN:</span><strong>C</strong></div>
           <div class="control-row"><span>AUDIO TOGGLE:</span><strong>M</strong></div>
+          <div class="control-row"><span>EINSTELLUNGEN:</span><strong>ESC oder P</strong></div>
         </div>
 
-        <button id="btn-start" class="neon-btn">RENNEN STARTEN</button>
+        <div class="menu-btn-group">
+          <button id="btn-start" class="neon-btn">RENNEN STARTEN</button>
+          <button id="btn-settings-start" class="neon-btn secondary">⚙️ EINSTELLUNGEN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay hidden">
+      <div class="settings-panel">
+        <h2 class="settings-title">⚙️ SYSTEM EINSTELLUNGEN</h2>
+        <div class="settings-divider"></div>
+
+        <div class="setting-group">
+          <div class="setting-label-row">
+            <span class="setting-name">🎵 MUSIK LAUTSTÄRKE</span>
+            <span class="setting-val" id="music-vol-val">65%</span>
+          </div>
+          <input type="range" id="slider-music-vol" class="cyber-slider" min="0" max="100" value="65" />
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-label-row">
+            <span class="setting-name">🔊 EFFEKTE LAUTSTÄRKE (FX)</span>
+            <span class="setting-val" id="sfx-vol-val">80%</span>
+          </div>
+          <input type="range" id="slider-sfx-vol" class="cyber-slider" min="0" max="100" value="80" />
+        </div>
+
+        <div class="setting-group-row">
+          <button id="btn-toggle-mute-modal" class="neon-btn sm">TON: AN [M]</button>
+          <button id="btn-test-sfx" class="neon-btn sm secondary">FX TEST</button>
+        </div>
+
+        <div class="settings-footer">
+          <button id="btn-close-settings" class="neon-btn">FERTIG / ZURÜCK</button>
+        </div>
       </div>
     </div>
   </div>
