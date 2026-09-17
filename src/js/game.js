@@ -1,21 +1,19 @@
 import * as THREE from 'three';
-import { SynthwaveScene } from './engine/scene.js';
-import { EngineRenderer } from './engine/renderer.js';
-import { CameraController } from './engine/camera.js';
-import { TrackGenerator } from './track/track-generator.js';
-import { CarModel } from './vehicles/car-model.js';
-import { VehiclePhysics } from './physics/vehicle-physics.js';
-import { AIDriver } from './ai/ai-driver.js';
-import { WeaponManager, WEAPON_INFO } from './combat/weapons.js';
-import { PickupManager } from './combat/pickup-manager.js';
-import { AudioSynth } from './audio/audio-synth.js';
+import { TRACK_WAYPOINTS, TRACK_CONFIG } from './track/track-data.js';
+import { CircuitTrack } from './track/circuit-track.js';
+import { CircuitMeshBuilder } from './track/circuit-mesh.js';
+import { IsometricCar } from './vehicles/isometric-car.js';
+import { RacerAI } from './ai/racer-ai.js';
+import { EngineAudio } from './audio/engine-audio.js';
 
 export class Game {
   constructor() {
     this.state = 'MENU'; // 'MENU' | 'COUNTDOWN' | 'RACING' | 'FINISHED'
     this.raceTime = 0.0;
-    this.totalLaps = 3;
+    this.totalLaps = TRACK_CONFIG.totalLaps || 3;
     this.countdownTimer = 3.99;
+    this.isPaused = false;
+    this.isSettingsOpen = false;
 
     // DOM Elements
     this.canvas = document.getElementById('racer-canvas');
@@ -23,34 +21,34 @@ export class Game {
     this.lapVal = document.getElementById('lap-val');
     this.timeVal = document.getElementById('time-val');
     this.speedVal = document.getElementById('speed-val');
-    this.boostMeterBar = document.getElementById('boost-meter-bar');
-    this.weaponIcon = document.getElementById('weapon-icon');
     this.centerMsg = document.getElementById('center-message');
     this.overlay = document.getElementById('overlay-screen');
     this.settingsModal = document.getElementById('settings-modal');
+    this.finishModal = document.getElementById('finish-modal');
     this.radarCanvas = document.getElementById('radar-canvas');
     this.radarCtx = this.radarCanvas ? this.radarCanvas.getContext('2d') : null;
 
-    this.isSettingsOpen = false;
-    this.isPaused = false;
+    // Audio
+    this.audioSynth = new EngineAudio();
 
-    // Subsystems
-    this.audioSynth = new AudioSynth();
-    this.renderer = new EngineRenderer(this.canvas);
-    this.scene = new SynthwaveScene();
-    
-    // Perspective Camera & Controller
-    this.threeCamera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 2000);
-    this.cameraController = new CameraController(this.threeCamera);
-    this.renderer.setupPostprocessing(this.scene.scene, this.threeCamera);
+    // Setup Three.js Scene & Renderer
+    this.setupScene();
 
-    this.track = new TrackGenerator(this.scene.scene);
-    this.weaponManager = new WeaponManager(this.scene.scene, this.audioSynth);
-    this.pickupManager = new PickupManager(this.scene.scene, this.track, this.audioSynth);
+    // Setup Track
+    this.circuitTrack = new CircuitTrack({
+      waypoints: TRACK_WAYPOINTS,
+      trackWidth: TRACK_CONFIG.trackWidth,
+      totalLaps: this.totalLaps
+    });
 
-    // Vehicles Setup
+    const meshBuilder = new CircuitMeshBuilder(TRACK_WAYPOINTS, TRACK_CONFIG.trackWidth);
+    this.scene.add(meshBuilder.build());
+
+    // Setup Vehicles (Player + 3 AI)
     this.vehicles = [];
-    this.setupVehicles();
+    this.aiDrivers = [];
+    this.trackers = [];
+    this.setupGrid();
 
     // Input state
     this.keys = {
@@ -58,165 +56,124 @@ export class Game {
       down: false,
       left: false,
       right: false,
-      handbrake: false,
-      fire: false
+      handbrake: false
     };
 
-    // Pre-render track outline for radar minimap
-    if (this.radarCanvas) {
-      this.prepareRadar();
-    }
-
-    // Resize handler with camera update
-    window.addEventListener('resize', () => {
-      this.renderer.onResize(this.threeCamera);
-    });
-
-    // Clock
-    this.clock = new THREE.Clock();
+    // Resize handler
+    window.addEventListener('resize', () => this.onResize());
   }
 
-  setupVehicles() {
-    // Starting grid offsets behind start line
-    const gridConfigs = [
-      { name: 'Player (You)', isPlayer: true, primary: 0x00ffff, accent: 0xff00ff, body: 0x22365a, glow: 0x00ffff, lane: 2.5, t: 0.996, maxSpeed: 140, accel: 45 },
-      { name: 'Neon Phantom', isPlayer: false, primary: 0xff007f, accent: 0x00ffff, body: 0x4a1842, glow: 0xff007f, lane: -2.5, t: 0.992, skill: 0.9, aggression: 0.8, maxSpeed: 136, accel: 43 },
-      { name: 'Viper 2088', isPlayer: false, primary: 0xffea00, accent: 0xff0055, body: 0x443a12, glow: 0xffea00, lane: 2.5, t: 0.988, skill: 0.82, aggression: 0.65, maxSpeed: 132, accel: 40 },
-      { name: 'Cyber Blade', isPlayer: false, primary: 0x00ff66, accent: 0x00aaff, body: 0x144428, glow: 0x00ff66, lane: -2.5, t: 0.984, skill: 0.78, aggression: 0.75, maxSpeed: 130, accel: 38 },
-    ];
+  setupScene() {
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x8ecae6);
 
-    gridConfigs.forEach((cfg) => {
-      const model = new CarModel({
-        primary: cfg.primary,
-        accent: cfg.accent,
-        body: cfg.body,
-        glow: cfg.glow
-      });
-      this.scene.scene.add(model.mesh);
-
-      const physics = new VehiclePhysics(this.track, {
-        maxSpeed: cfg.maxSpeed,
-        accel: cfg.accel,
-        turnSpeed: 2.2
-      });
-
-      // Place on starting grid
-      const trackInfo = this.track.getTrackTransformAt(cfg.t);
-      const tangent = trackInfo.tangent.clone().normalize();
-      const normal = new THREE.Vector3(0, 1, 0);
-      const binormal = new THREE.Vector3().crossVectors(tangent, normal).normalize();
-      const startPos = trackInfo.position.clone().addScaledVector(binormal, cfg.lane);
-      startPos.y += 0.2;
-
-      physics.resetAt(startPos, tangent);
-      physics.applyToMesh(model.mesh);
-
-      let vehicleObj;
-      if (cfg.isPlayer) {
-        vehicleObj = {
-          name: cfg.name,
-          isPlayer: true,
-          physics,
-          model,
-          weaponSlot: null,
-          colorHex: cfg.primary
-        };
-        this.player = vehicleObj;
-
-        physics.onRespawn = () => {
-          this.audioSynth.playRespawn();
-          if (this.centerMsg && this.state === 'RACING') {
-            this.centerMsg.innerText = 'RESPAWN';
-            this.centerMsg.style.color = '#00ffff';
-            setTimeout(() => {
-              if (this.centerMsg && this.centerMsg.innerText === 'RESPAWN') {
-                this.centerMsg.innerText = '';
-              }
-            }, 800);
-          }
-        };
-      } else {
-        const aiDriver = new AIDriver(cfg.name, physics, model, {
-          skill: cfg.skill,
-          aggression: cfg.aggression,
-          laneOffset: cfg.lane
-        });
-        vehicleObj = {
-          name: cfg.name,
-          isPlayer: false,
-          physics,
-          model,
-          aiDriver,
-          weaponSlot: null,
-          colorHex: cfg.primary
-        };
-      }
-
-      this.vehicles.push(vehicleObj);
+    // Renderer
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: true,
+      powerPreference: 'high-performance'
     });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Isometric Orthographic Camera
+    const aspect = window.innerWidth / window.innerHeight;
+    const d = 48;
+    this.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+
+    // Camera offset for true isometric perspective
+    this.cameraOffset = new THREE.Vector3(-42, 58, 42);
+    this.camera.position.set(-40 + this.cameraOffset.x, this.cameraOffset.y, -40 + this.cameraOffset.z);
+    this.camera.lookAt(-40, 0, -40);
+
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+    this.scene.add(ambientLight);
+
+    const sunLight = new THREE.DirectionalLight(0xfff7e6, 1.25);
+    sunLight.position.set(80, 140, 60);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 300;
+    const shadowSize = 120;
+    sunLight.shadow.camera.left = -shadowSize;
+    sunLight.shadow.camera.right = shadowSize;
+    sunLight.shadow.camera.top = shadowSize;
+    sunLight.shadow.camera.bottom = -shadowSize;
+    this.scene.add(sunLight);
+  }
+
+  setupGrid() {
+    this.vehicles = [];
+    this.aiDrivers = [];
+    this.trackers = [];
+
+    const spots = TRACK_CONFIG.gridSpots;
+    for (let i = 0; i < spots.length; i++) {
+      const spot = spots[i];
+      const isAI = i > 0;
+
+      const car = new IsometricCar({
+        name: spot.name,
+        color: spot.color,
+        isAI,
+        x: spot.x,
+        z: spot.z,
+        angle: spot.angle,
+        maxSpeed: isAI ? 92 + (i * 2) : 105,
+        acceleration: isAI ? 44 : 50
+      });
+
+      this.scene.add(car.mesh);
+      this.vehicles.push(car);
+
+      const tracker = this.circuitTrack.createVehicleTracker(spot.name);
+      this.trackers.push(tracker);
+
+      if (isAI) {
+        const ai = new RacerAI({
+          waypoints: TRACK_WAYPOINTS,
+          lookaheadDistance: 16,
+          aggressiveness: 0.90 + (i * 0.05)
+        });
+        this.aiDrivers.push(ai);
+      }
+    }
+
+    this.player = this.vehicles[0];
+    this.playerTracker = this.trackers[0];
   }
 
   startRace() {
-    if (this.state === 'COUNTDOWN' || this.state === 'RACING') return;
-    this.audioSynth.init();
-    if (this.overlay) {
-      this.overlay.classList.add('hidden');
-    }
     this.state = 'COUNTDOWN';
     this.countdownTimer = 3.99;
-  }
+    this.raceTime = 0.0;
 
-  openSettings() {
-    this.isSettingsOpen = true;
-    if (this.settingsModal) {
-      this.settingsModal.classList.remove('hidden');
+    if (this.overlay) {
+      this.overlay.classList.remove('visible');
+      this.overlay.classList.add('hidden');
     }
-    if (this.state === 'RACING') {
-      this.isPaused = true;
+    if (this.finishModal) {
+      this.finishModal.classList.add('hidden');
     }
-    this.syncSettingsUI();
-  }
 
-  closeSettings() {
-    this.isSettingsOpen = false;
-    if (this.settingsModal) {
-      this.settingsModal.classList.add('hidden');
+    this.audioSynth.init();
+    this.audioSynth.resume();
+    this.audioSynth.playBeep(false);
+
+    if (this.centerMsg) {
+      this.centerMsg.innerText = '3';
+      this.centerMsg.classList.add('show');
     }
-    this.isPaused = false;
-  }
-
-  toggleSettings() {
-    if (this.isSettingsOpen) {
-      this.closeSettings();
-    } else {
-      this.openSettings();
-    }
-  }
-
-  syncSettingsUI() {
-    const sliderMusic = document.getElementById('slider-music-vol');
-    const sliderSfx = document.getElementById('slider-sfx-vol');
-    const txtMusic = document.getElementById('music-vol-val');
-    const txtSfx = document.getElementById('sfx-vol-val');
-    const btnMute = document.getElementById('btn-toggle-mute-modal');
-
-    const mVol = Math.round(this.audioSynth.getMusicVolume() * 100);
-    const sVol = Math.round(this.audioSynth.getSfxVolume() * 100);
-
-    if (sliderMusic) sliderMusic.value = mVol;
-    if (sliderSfx) sliderSfx.value = sVol;
-    if (txtMusic) txtMusic.innerText = `${mVol}%`;
-    if (txtSfx) txtSfx.innerText = `${sVol}%`;
-    if (btnMute) btnMute.innerText = this.audioSynth.isMuted ? 'TON: STUMM [M]' : 'TON: AN [M]';
   }
 
   handleKeyDown(e) {
+    if (e.repeat) return;
     const key = e.key.toLowerCase();
-
-    if (key === 'escape' || key === 'p') {
-      this.toggleSettings();
-      return;
-    }
 
     if (key === 'w' || key === 'arrowup') this.keys.up = true;
     if (key === 's' || key === 'arrowdown') this.keys.down = true;
@@ -224,21 +181,11 @@ export class Game {
     if (key === 'd' || key === 'arrowright') this.keys.right = true;
     if (key === ' ' || key === 'shift') this.keys.handbrake = true;
 
-    if (key === 'f' || key === 'enter') {
-      if (this.state === 'RACING' && this.player.weaponSlot) {
-        this.weaponManager.fireWeapon(this.player, this.player.weaponSlot, this.vehicles);
-        this.player.weaponSlot = null;
-        this.updateWeaponHUD();
-      }
+    if (key === 'escape' || key === 'p') {
+      this.toggleSettings();
     }
-
-    if (key === 'c') {
-      this.cameraController.toggleMode();
-    }
-
     if (key === 'm') {
-      this.audioSynth.toggleMute();
-      this.syncSettingsUI();
+      this.toggleMute();
     }
   }
 
@@ -251,269 +198,292 @@ export class Game {
     if (key === ' ' || key === 'shift') this.keys.handbrake = false;
   }
 
-  update(delta) {
+  update(dt) {
     if (this.isPaused) return;
 
-    const time = this.clock.getElapsedTime();
-
-    // 1. Countdown Logic
     if (this.state === 'COUNTDOWN') {
-      this.countdownTimer -= delta;
-      if (this.countdownTimer > 3.0) {
-        if (this.centerMsg) this.centerMsg.innerText = '3';
-      } else if (this.countdownTimer > 2.0) {
-        if (this.centerMsg) this.centerMsg.innerText = '2';
-      } else if (this.countdownTimer > 1.0) {
-        if (this.centerMsg) this.centerMsg.innerText = '1';
-      } else if (this.countdownTimer > 0.0) {
-        if (this.centerMsg) {
-          this.centerMsg.innerText = 'GO!';
-          this.centerMsg.style.color = '#00ff66';
-        }
-      } else {
-        if (this.centerMsg) this.centerMsg.innerText = '';
-        this.state = 'RACING';
+      this.updateCountdown(dt);
+    } else if (this.state === 'RACING' || this.state === 'FINISHED') {
+      if (this.state === 'RACING') {
+        this.raceTime += dt;
       }
+      this.updateVehicles(dt);
+      this.checkCollisions();
+      this.updateTrackProgression(dt);
+      this.updateHUD();
+      this.renderRadar();
     }
 
-    // 2. Race Time
-    if (this.state === 'RACING') {
-      this.raceTime += delta;
-      this.player.physics.currentLapTime += delta;
-      this.updateTimeHUD(this.player.physics.currentLapTime);
-    }
-
-    // 3. Player Controls
-    if (this.state === 'RACING') {
-      let throttle = 0;
-      if (this.keys.up) throttle += 1.0;
-      if (this.keys.down) throttle -= 1.0;
-
-      let steer = 0;
-      if (this.keys.left) steer -= 1.0;
-      if (this.keys.right) steer += 1.0;
-
-      this.player.physics.setInputs(throttle, steer, this.keys.handbrake);
-    } else {
-      this.player.physics.setInputs(0, 0, true);
-    }
-
-    // 4. Update Vehicles (Player & AI)
-    this.vehicles.forEach((v) => {
-      if (!v.isPlayer && this.state === 'RACING') {
-        v.aiDriver.update(delta, this.track, this.vehicles, this.weaponManager);
-      }
-
-      const prevLap = v.physics.currentLap;
-      v.physics.update(delta);
-
-      // Check lap advance for player
-      if (v.isPlayer && v.physics.currentLap > prevLap) {
-        if (v.physics.currentLap > this.totalLaps) {
-          this.state = 'FINISHED';
-          if (this.centerMsg) {
-            this.centerMsg.innerText = 'FINISH!';
-            this.centerMsg.style.color = '#00ffff';
-          }
-        } else if (v.physics.currentLap === this.totalLaps) {
-          if (this.centerMsg) {
-            this.centerMsg.innerText = 'FINAL LAP!';
-            this.centerMsg.style.color = '#ff007f';
-            setTimeout(() => {
-              if (this.centerMsg && this.centerMsg.innerText === 'FINAL LAP!') {
-                this.centerMsg.innerText = '';
-              }
-            }, 2500);
-          }
-        }
-        this.audioSynth.playLapChime();
-      }
-
-      // Check item pickups
-      const pickupWeapon = this.pickupManager.checkCollisions(v, this.calculateLeaderboardPosition(v));
-      if (pickupWeapon) {
-        v.weaponSlot = pickupWeapon;
-        if (v.isPlayer) this.updateWeaponHUD();
-      }
-
-      // Update 3D Model transforms and visual effects
-      v.physics.applyToMesh(v.model.mesh);
-      v.model.update(
-        delta,
-        v.physics.speed,
-        v.physics.steerAngle,
-        v.physics.isBraking,
-        v.physics.isBoosting,
-        v.physics.hasShield,
-        v.physics.spinTimer > 0
-      );
-
-      // Blinking animation on respawn recovery
-      if (v.physics.respawnBlinkTimer > 0) {
-        v.model.mesh.visible = Math.floor(v.physics.respawnBlinkTimer * 12) % 2 === 0;
-      } else {
-        v.model.mesh.visible = true;
-      }
-    });
-
-    // 5. Combat & Weapons Update
-    this.weaponManager.update(delta, this.vehicles);
-    this.pickupManager.update(delta);
-    this.track.update(delta, time);
-    this.scene.update(delta, time);
-
-    // 6. Camera Follow Player
-    this.cameraController.update(
-      this.player.model.mesh,
-      this.player.physics,
-      delta
-    );
-
-    // 7. Audio Engine Modulation
-    this.audioSynth.updateEngine(this.player.physics.speed, this.player.physics.isBoosting);
-
-    // 8. HUD & Radar
-    this.updateHUD();
-    this.drawRadar();
+    this.updateCamera(dt);
   }
 
-  calculateLeaderboardPosition(vehicle) {
-    const sorted = [...this.vehicles].sort((a, b) => {
-      const progA = a.physics.currentLap + a.physics.trackT;
-      const progB = b.physics.currentLap + b.physics.trackT;
-      return progB - progA;
-    });
+  updateCountdown(dt) {
+    const prevTimer = Math.ceil(this.countdownTimer);
+    this.countdownTimer -= dt;
+    const currentTimer = Math.ceil(this.countdownTimer);
 
-    return sorted.findIndex((v) => v === vehicle) + 1;
+    if (currentTimer !== prevTimer && currentTimer > 0) {
+      this.audioSynth.playBeep(false);
+      if (this.centerMsg) this.centerMsg.innerText = currentTimer.toString();
+    }
+
+    if (this.countdownTimer <= 0) {
+      this.state = 'RACING';
+      this.audioSynth.playBeep(true);
+      if (this.centerMsg) {
+        this.centerMsg.innerText = 'GO!';
+        setTimeout(() => {
+          if (this.centerMsg) this.centerMsg.classList.remove('show');
+        }, 1000);
+      }
+    }
+  }
+
+  updateVehicles(dt) {
+    // 1. Update Player
+    let playerThrottle = 0;
+    if (this.keys.up) playerThrottle += 1;
+    if (this.keys.down) playerThrottle -= 1;
+
+    let playerSteer = 0;
+    if (this.keys.left) playerSteer -= 1;
+    if (this.keys.right) playerSteer += 1;
+
+    const playerSurface = this.circuitTrack.getTrackSurfaceAt(this.player.physics.x, this.player.physics.z);
+    this.player.update(dt, {
+      throttle: playerThrottle,
+      steer: playerSteer,
+      handbrake: this.keys.handbrake
+    }, playerSurface);
+
+    this.audioSynth.update(this.player.physics.speed, this.player.physics.maxSpeed, this.player.physics.isDrifting);
+
+    // 2. Update AI Rivals
+    for (let i = 1; i < this.vehicles.length; i++) {
+      const car = this.vehicles[i];
+      const ai = this.aiDrivers[i - 1];
+      const tracker = this.trackers[i];
+
+      const input = ai.computeInput(car.physics, tracker.nextCheckpointIndex, this.vehicles.map(v => v.physics));
+      const surface = this.circuitTrack.getTrackSurfaceAt(car.physics.x, car.physics.z);
+      car.update(dt, input, surface);
+    }
+  }
+
+  checkCollisions() {
+    // Vehicle to Barrier collisions
+    for (const car of this.vehicles) {
+      const barrier = this.circuitTrack.checkBarrierCollision(car.physics.x, car.physics.z, car.physics.radius);
+      if (barrier) {
+        const collided = car.physics.resolveBarrierCollision(barrier, 0.45);
+        if (collided && car === this.player) {
+          this.audioSynth.playImpact();
+        }
+      }
+    }
+
+    // Vehicle to Vehicle pairwise collisions
+    for (let i = 0; i < this.vehicles.length; i++) {
+      for (let j = i + 1; j < this.vehicles.length; j++) {
+        const carA = this.vehicles[i];
+        const carB = this.vehicles[j];
+        const collided = carA.physics.resolveVehicleCollision(carB.physics, 0.5);
+        if (collided && (carA === this.player || carB === this.player)) {
+          this.audioSynth.playImpact();
+        }
+      }
+    }
+  }
+
+  updateTrackProgression(dt) {
+    for (let i = 0; i < this.vehicles.length; i++) {
+      const car = this.vehicles[i];
+      const tracker = this.trackers[i];
+      this.circuitTrack.updateTracker(tracker, { x: car.physics.x, z: car.physics.z }, dt);
+    }
+
+    // Check if player has finished the race
+    if (this.playerTracker.isFinished && this.state === 'RACING') {
+      this.state = 'FINISHED';
+      this.showFinishScreen();
+    }
+  }
+
+  updateCamera(dt) {
+    if (!this.player) return;
+
+    // Smoothly follow player car
+    const targetX = this.player.physics.x + this.cameraOffset.x;
+    const targetZ = this.player.physics.z + this.cameraOffset.z;
+
+    const lerpFactor = Math.min(1.0, 6.0 * dt);
+    this.camera.position.x += (targetX - this.camera.position.x) * lerpFactor;
+    this.camera.position.z += (targetZ - this.camera.position.z) * lerpFactor;
+    this.camera.position.y = this.cameraOffset.y;
+
+    this.camera.lookAt(this.camera.position.x - this.cameraOffset.x, 0, this.camera.position.z - this.cameraOffset.z);
   }
 
   updateHUD() {
-    if (!this.speedVal) return;
+    const standings = this.circuitTrack.calculateStandings(this.trackers);
+    const playerRank = standings.findIndex(t => t.id === this.playerTracker.id) + 1;
 
-    // Speedometer
-    const speed = Math.round(Math.abs(this.player.physics.speed));
-    this.speedVal.innerText = speed.toString().padStart(3, '0');
-
-    // Nitro meter bar
-    if (this.boostMeterBar) {
-      const nitroPercent = this.player.physics.boostTimer > 0
-        ? Math.min(100, (this.player.physics.boostTimer / 1.8) * 100)
-        : (this.player.physics.speed / this.player.physics.maxSpeed) * 100;
-      this.boostMeterBar.style.width = `${nitroPercent}%`;
-    }
-
-    // Position
     if (this.posVal) {
-      const pos = this.calculateLeaderboardPosition(this.player);
-      this.posVal.innerHTML = `${pos}<small>/4</small>`;
+      this.posVal.innerHTML = `${playerRank}<small>/${this.vehicles.length}</small>`;
     }
-
-    // Lap
     if (this.lapVal) {
-      const lap = Math.min(this.player.physics.currentLap, this.totalLaps);
-      this.lapVal.innerHTML = `${lap}<small>/${this.totalLaps}</small>`;
+      this.lapVal.innerHTML = `${this.playerTracker.currentLap}<small>/${this.totalLaps}</small>`;
+    }
+    if (this.timeVal) {
+      this.timeVal.innerText = this.formatTime(this.raceTime);
+    }
+    if (this.speedVal) {
+      const kmh = Math.round(Math.abs(this.player.physics.speed) * 1.8);
+      this.speedVal.innerText = kmh.toString().padStart(3, '0');
     }
   }
 
-  updateTimeHUD(seconds) {
-    if (!this.timeVal) return;
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    const hundredths = Math.floor((seconds % 1) * 100);
-    this.timeVal.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${hundredths.toString().padStart(2, '0')}`;
-  }
-
-  updateWeaponHUD() {
-    if (!this.weaponIcon) return;
-    const slot = this.player.weaponSlot;
-    if (!slot) {
-      this.weaponIcon.innerHTML = 'KEINE';
-      this.weaponIcon.className = 'weapon-empty';
-      this.weaponIcon.style.color = '#555';
-    } else {
-      const info = WEAPON_INFO[slot];
-      this.weaponIcon.innerHTML = `<span style="font-size:1.4rem;">${info.icon}</span> ${info.name}`;
-      this.weaponIcon.className = 'weapon-active';
-      this.weaponIcon.style.color = info.color;
-    }
-  }
-
-  prepareRadar() {
-    this.radarPoints = [];
-    for (let i = 0; i < 100; i++) {
-      const t = i / 100;
-      const pt = this.track.curve.getPointAt(t);
-      this.radarPoints.push({ x: pt.x, z: pt.z });
-    }
-
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-    this.radarPoints.forEach((p) => {
-      if (p.x < minX) minX = p.x;
-      if (p.x > maxX) maxX = p.x;
-      if (p.z < minZ) minZ = p.z;
-      if (p.z > maxZ) maxZ = p.z;
-    });
-
-    const padding = 15;
-    const w = this.radarCanvas.width - padding * 2;
-    const h = this.radarCanvas.height - padding * 2;
-    const rangeX = (maxX - minX) || 1;
-    const rangeZ = (maxZ - minZ) || 1;
-
-    this.radarTransform = (worldX, worldZ) => {
-      const normX = (worldX - minX) / rangeX;
-      const normZ = (worldZ - minZ) / rangeZ;
-      return {
-        x: padding + normX * w,
-        y: padding + normZ * h
-      };
-    };
-  }
-
-  drawRadar() {
-    if (!this.radarCtx || !this.radarCanvas || !this.radarTransform) return;
+  renderRadar() {
+    if (!this.radarCtx || !this.radarCanvas) return;
     const ctx = this.radarCtx;
     const w = this.radarCanvas.width;
     const h = this.radarCanvas.height;
 
     ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
+    ctx.fillRect(0, 0, w, h);
 
-    // Track path wireframe
-    ctx.strokeStyle = '#00ffff';
-    ctx.lineWidth = 2.5;
-    ctx.shadowBlur = 6;
-    ctx.shadowColor = '#00ffff';
+    // Map bounds: approx [-140, 200] in X, [-60, 140] in Z
+    const minX = -150, maxX = 210, minZ = -60, maxZ = 120;
+    const scaleX = w / (maxX - minX);
+    const scaleZ = h / (maxZ - minZ);
+
+    const toMapX = (x) => (x - minX) * scaleX;
+    const toMapY = (z) => (z - minZ) * scaleZ;
+
+    // Draw track line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-
-    this.radarPoints.forEach((p, idx) => {
-      const screen = this.radarTransform(p.x, p.z);
-      if (idx === 0) ctx.moveTo(screen.x, screen.y);
-      else ctx.lineTo(screen.x, screen.y);
-    });
+    for (let i = 0; i < TRACK_WAYPOINTS.length; i++) {
+      const wp = TRACK_WAYPOINTS[i];
+      const mx = toMapX(wp.x);
+      const my = toMapY(wp.z);
+      if (i === 0) ctx.moveTo(mx, my);
+      else ctx.lineTo(mx, my);
+    }
     ctx.closePath();
     ctx.stroke();
-    ctx.shadowBlur = 0;
 
-    // Draw Vehicle dots
-    this.vehicles.forEach((v) => {
-      const screen = this.radarTransform(v.physics.position.x, v.physics.position.z);
+    // Draw cars
+    for (let i = 0; i < this.vehicles.length; i++) {
+      const car = this.vehicles[i];
+      const mx = toMapX(car.physics.x);
+      const my = toMapY(car.physics.z);
+
       ctx.beginPath();
-      if (v.isPlayer) {
-        ctx.fillStyle = '#ffffff';
-        ctx.arc(screen.x, screen.y, 4.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#00ffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-      } else {
-        ctx.fillStyle = '#ff007f';
-        ctx.arc(screen.x, screen.y, 3.2, 0, Math.PI * 2);
-        ctx.fill();
+      ctx.arc(mx, my, i === 0 ? 5 : 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = i === 0 ? '#e63946' : '#38bdf8';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  showFinishScreen() {
+    if (this.centerMsg) {
+      this.centerMsg.innerText = 'ZIEL!';
+      this.centerMsg.classList.add('show');
+    }
+
+    setTimeout(() => {
+      if (this.finishModal) {
+        const standings = this.circuitTrack.calculateStandings(this.trackers);
+        const listEl = document.getElementById('podium-list');
+        if (listEl) {
+          listEl.innerHTML = standings.map((s, idx) => `
+            <div class="podium-row ${s.id === this.playerTracker.id ? 'player-row' : ''}">
+              <span class="podium-rank">P${idx + 1}</span>
+              <span class="podium-name">${s.id}</span>
+              <span class="podium-time">${s.bestLapTime ? this.formatTime(s.bestLapTime) : '--:--.--'}</span>
+            </div>
+          `).join('');
+        }
+        this.finishModal.classList.remove('hidden');
       }
-    });
+    }, 1500);
+  }
+
+  restartRace() {
+    if (this.finishModal) this.finishModal.classList.add('hidden');
+    const spots = TRACK_CONFIG.gridSpots;
+    for (let i = 0; i < this.vehicles.length; i++) {
+      const car = this.vehicles[i];
+      const spot = spots[i];
+      car.physics.x = spot.x;
+      car.physics.z = spot.z;
+      car.physics.angle = spot.angle;
+      car.physics.speed = 0;
+      car.physics.vx = 0;
+      car.physics.vz = 0;
+      car.mesh.position.set(spot.x, 0, spot.z);
+      car.mesh.rotation.y = -spot.angle;
+
+      this.trackers[i] = this.circuitTrack.createVehicleTracker(car.name);
+    }
+    this.playerTracker = this.trackers[0];
+    this.startRace();
+  }
+
+  formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds * 100) % 100);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+  }
+
+  openSettings() {
+    this.isSettingsOpen = true;
+    if (this.settingsModal) this.settingsModal.classList.remove('hidden');
+  }
+
+  closeSettings() {
+    this.isSettingsOpen = false;
+    if (this.settingsModal) this.settingsModal.classList.add('hidden');
+  }
+
+  toggleSettings() {
+    if (this.isSettingsOpen) this.closeSettings();
+    else this.openSettings();
+  }
+
+  toggleMute() {
+    this.audioSynth.muted = !this.audioSynth.muted;
+    this.syncSettingsUI();
+  }
+
+  syncSettingsUI() {
+    const muteBtn = document.getElementById('btn-toggle-mute-modal');
+    if (muteBtn) {
+      muteBtn.innerText = this.audioSynth.muted ? 'TON: AUS [M]' : 'TON: AN [M]';
+    }
+  }
+
+  onResize() {
+    const aspect = window.innerWidth / window.innerHeight;
+    const d = 48;
+    this.camera.left = -d * aspect;
+    this.camera.right = d * aspect;
+    this.camera.top = d;
+    this.camera.bottom = -d;
+    this.camera.updateProjectionMatrix();
+
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   }
 
   render() {
-    this.renderer.render(this.scene.scene, this.threeCamera);
+    this.renderer.render(this.scene, this.camera);
   }
 }

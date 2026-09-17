@@ -1,16 +1,39 @@
-# 🏎️ webracer-3d // Neon Drift: Cyber Circuit
+# 🏎️ APEX CIRCUIT // 3D Isometric Arcade Racer
 
-Ein rasanter **3D-Arcade-Combat-Racer** im Browser im **Retro-Synthwave- & Cyberpunk-Stil** mit Three.js, maßgeschneiderter Arcade-Raycast-Fahrphysik, dynamischer Follow-Cam, KI-Gegnern, 5 Waffen-Powerups und prozeduraler Web-Audio-Synthese.
+Ein rasanter **3D-Isometrie-Arcade-Racer** im Browser (Three.js), inspiriert von Klassikern wie *GeneRally* und *Circuit Superstars*, mit maßgeschneiderter **2.5D-Arcade-Fahrphysik**, anspruchsvollem Drift-Handling, einem intelligenten **KI-Fahrerfeld** (4 Rennwagen) und dynamischem Web-Audio-Synthesizer.
 
 ## Features
-- 🌆 **Synthwave-Ästhetik:** Unendlicher Vektor-Grid, Wireframe-Berge, Retro-Sonne, Post-Processing Bloom-Effekt.
-- 🏎️ **Arcade-Fahrphysik:** Driften mit Handbremse, Slip-Angle, Federung, Nitro-Schub und Wand-Kollisionen.
-- 🚀 **Waffen & Combat:** Homing Missiles, EMP-Blaster, Cyber-Minen, Nitro-Boost und Neon-Schilde.
-- 🤖 **KI-Gegner:** 3 KI-Rennfahrer mit dynamischer Strecken-Navigation und Waffeneinsatz.
-- 🎵 **Web Audio Synthesizer:** Prozeduraler Motorsound, Reifenspuren-Quietschen, Explosionen und Synthwave-Soundtrack.
+- 🏁 **Isometrische 3D-Perspektive:** Orthografische Three.js-Kamera mit flüssiger Fahrzeugverfolgung für optimale Streckenübersicht und Renndynamik.
+- 🏎️ **Maßgeschneiderte 2.5D-Arcade-Physik:**
+  - Reaktionsschnelle Gas- und Bremsannahme.
+  - Dynamischer Drift- und Slip-Angle (Power-Drift mit Leertaste).
+  - Oberflächenreibung (Asphalt-Grip, Randstein-Rumble, Rasen-Geschwindigkeitsabfall).
+  - Elastische Banden- und Fahrzeugkollisionen (kein Hängenbleiben, packende Positionskämpfe).
+- 🤖 **KI-Fahrerfeld:** 3 autonome Kontrahenten mit Ideallinien-Navigation, Kurvenanbremsung und Überhol-Ausweichlogik.
+- ⏱️ **Renn-Progression & HUD:** Checkpoint-basierte Rundenzeiterfassung, Live-Platzierungsanzeige (P1–P4), Tacho und Strecken-Radar (Minimap).
+- 🔊 **Web Audio Synthesizer:** Prozeduraler Motorensound mit Drehzahl-Pitch, Reifenquietschen beim Driften und Kollisionsgeräusche.
 
-## Starten
+## Steuerung
+- **Gas / Bremse:** `W` / `S` oder `Pfeil Oben` / `Pfeil Unten`
+- **Lenkung:** `A` / `D` oder `Pfeil Links` / `Pfeil Rechts`
+- **Power-Drift:** `Leertaste` oder `Shift`
+- **Audio Stummschalten:** `M`
+- **Optionen:** `ESC` oder `P`
+
+## Entwicklung & Tests
 ```bash
+# Abhängigkeiten installieren
 npm install
+
+# Lokalen Dev-Server starten
 npm run dev
+
+# Unit-Tests (Physik, KI, Wegpunkte)
+npm run test:unit
+
+# E2E-Tests (Playwright)
+npm run test:e2e
+
+# Alle Tests ausführen
+npm test
 ```

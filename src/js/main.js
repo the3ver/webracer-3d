@@ -4,12 +4,21 @@ window.addEventListener('DOMContentLoaded', () => {
   const game = new Game();
   window.game = game;
 
-  // Start Button
+  // Start Button (Start Screen)
   const btnStart = document.getElementById('btn-start');
   if (btnStart) {
     btnStart.addEventListener('click', () => {
       btnStart.blur();
       game.startRace();
+    });
+  }
+
+  // Restart Button (Finish Podium Screen)
+  const btnRestart = document.getElementById('btn-restart');
+  if (btnRestart) {
+    btnRestart.addEventListener('click', () => {
+      btnRestart.blur();
+      game.restartRace();
     });
   }
 
@@ -38,34 +47,12 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Volume Sliders
-  const sliderMusic = document.getElementById('slider-music-vol');
-  const txtMusic = document.getElementById('music-vol-val');
-  if (sliderMusic) {
-    sliderMusic.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      game.audioSynth.setMusicVolume(val / 100);
-      if (txtMusic) txtMusic.innerText = `${val}%`;
-    });
-  }
-
-  const sliderSfx = document.getElementById('slider-sfx-vol');
-  const txtSfx = document.getElementById('sfx-vol-val');
-  if (sliderSfx) {
-    sliderSfx.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10);
-      game.audioSynth.setSfxVolume(val / 100);
-      if (txtSfx) txtSfx.innerText = `${val}%`;
-    });
-  }
-
   // Mute toggle in modal
   const btnToggleMuteModal = document.getElementById('btn-toggle-mute-modal');
   if (btnToggleMuteModal) {
     btnToggleMuteModal.addEventListener('click', () => {
       btnToggleMuteModal.blur();
-      game.audioSynth.toggleMute();
-      game.syncSettingsUI();
+      game.toggleMute();
     });
   }
 
@@ -75,7 +62,7 @@ window.addEventListener('DOMContentLoaded', () => {
     btnTestSfx.addEventListener('click', () => {
       btnTestSfx.blur();
       game.audioSynth.init();
-      game.audioSynth.playPickup();
+      game.audioSynth.playBeep(true);
     });
   }
 

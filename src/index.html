@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEON DRIFT // CYBER CIRCUIT 3D</title>
+  <title>APEX CIRCUIT // 3D ISOMETRIC RACER</title>
   <link rel="stylesheet" href="css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div id="game-container">
@@ -15,7 +15,7 @@
 
     <!-- HUD Overlay -->
     <div id="hud">
-      <!-- Top Bar: Lap, Time, Position -->
+      <!-- Top Bar: Position, Lap, Time -->
       <div class="hud-top">
         <div class="hud-box" id="pos-box">
           <span class="hud-label">POSITION</span>
@@ -26,7 +26,7 @@
           <span class="hud-value" id="lap-val">1<small>/3</small></span>
         </div>
         <div class="hud-box" id="time-box">
-          <span class="hud-label">ZEIT</span>
+          <span class="hud-label">RENNZEIT</span>
           <span class="hud-value" id="time-val">00:00.00</span>
         </div>
       </div>
@@ -34,24 +34,14 @@
       <!-- Center Countdown / Notifications -->
       <div id="center-message"></div>
 
-      <!-- Bottom Bar: Weapon Slot & Speedometer -->
+      <!-- Bottom Bar: Speedometer -->
       <div class="hud-bottom">
-        <!-- Weapon Slot -->
-        <div class="hud-box" id="weapon-slot">
-          <span class="hud-label">WAFFE [F / ENTER]</span>
-          <div id="weapon-icon" class="weapon-empty">KEINE</div>
-        </div>
-
-        <!-- Speedometer -->
         <div class="hud-box" id="speedo-box">
           <div class="speedo-dial">
             <span id="speed-val">000</span>
             <span class="speed-unit">KM/H</span>
           </div>
-          <div class="boost-meter-container">
-            <div id="boost-meter-bar"></div>
-          </div>
-          <span class="hud-label">NITRO BOOST</span>
+          <span class="hud-label">GESCHWINDIGKEIT</span>
         </div>
       </div>
 
@@ -64,25 +54,35 @@
       <button id="btn-settings-hud" class="hud-btn-icon" title="Einstellungen (ESC / P)">⚙️</button>
     </div>
 
-    <!-- Start / Pause Screen -->
+    <!-- Start Screen Overlay -->
     <div id="overlay-screen" class="visible">
       <div class="overlay-content">
-        <h1 class="glitch-title">NEON DRIFT</h1>
-        <h2 class="sub-title">// CYBER CIRCUIT 3D //</h2>
+        <h1 class="circuit-title">APEX CIRCUIT</h1>
+        <h2 class="sub-title">// 3D ISOMETRIC ARCADE RACER //</h2>
         
         <div class="controls-guide">
           <div class="control-row"><span>GAS / BREMSE:</span><strong>W / S oder Pfeil Oben/Unten</strong></div>
           <div class="control-row"><span>LENKUNG:</span><strong>A / D oder Pfeil Links/Rechts</strong></div>
-          <div class="control-row"><span>DRIFTEN:</span><strong>LEERTASTE oder SHIFT</strong></div>
-          <div class="control-row"><span>WAFFE ABFEUERN:</span><strong>F oder ENTER</strong></div>
-          <div class="control-row"><span>KAMERA WECHSELN:</span><strong>C</strong></div>
+          <div class="control-row"><span>POWER-DRIFT:</span><strong>LEERTASTE oder SHIFT</strong></div>
           <div class="control-row"><span>AUDIO TOGGLE:</span><strong>M</strong></div>
           <div class="control-row"><span>EINSTELLUNGEN:</span><strong>ESC oder P</strong></div>
         </div>
 
         <div class="menu-btn-group">
-          <button id="btn-start" class="neon-btn">RENNEN STARTEN</button>
-          <button id="btn-settings-start" class="neon-btn secondary">⚙️ EINSTELLUNGEN</button>
+          <button id="btn-start" class="circuit-btn">STARTAUFSTELLUNG & RENNEN</button>
+          <button id="btn-settings-start" class="circuit-btn secondary">⚙️ OPTIONEN</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Finish Podium Modal -->
+    <div id="finish-modal" class="modal-overlay hidden">
+      <div class="podium-panel">
+        <h2 class="podium-title">🏁 RENN-ERGEBNIS</h2>
+        <div class="settings-divider"></div>
+        <div id="podium-list" class="podium-list"></div>
+        <div class="settings-footer">
+          <button id="btn-restart" class="circuit-btn">NOCHMAL STARTEN</button>
         </div>
       </div>
     </div>
@@ -90,32 +90,16 @@
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal-overlay hidden">
       <div class="settings-panel">
-        <h2 class="settings-title">⚙️ SYSTEM EINSTELLUNGEN</h2>
+        <h2 class="settings-title">⚙️ EINSTELLUNGEN</h2>
         <div class="settings-divider"></div>
 
-        <div class="setting-group">
-          <div class="setting-label-row">
-            <span class="setting-name">🎵 MUSIK LAUTSTÄRKE</span>
-            <span class="setting-val" id="music-vol-val">65%</span>
-          </div>
-          <input type="range" id="slider-music-vol" class="cyber-slider" min="0" max="100" value="65" />
-        </div>
-
-        <div class="setting-group">
-          <div class="setting-label-row">
-            <span class="setting-name">🔊 EFFEKTE LAUTSTÄRKE (FX)</span>
-            <span class="setting-val" id="sfx-vol-val">80%</span>
-          </div>
-          <input type="range" id="slider-sfx-vol" class="cyber-slider" min="0" max="100" value="80" />
-        </div>
-
         <div class="setting-group-row">
-          <button id="btn-toggle-mute-modal" class="neon-btn sm">TON: AN [M]</button>
-          <button id="btn-test-sfx" class="neon-btn sm secondary">FX TEST</button>
+          <button id="btn-toggle-mute-modal" class="circuit-btn sm">TON: AN [M]</button>
+          <button id="btn-test-sfx" class="circuit-btn sm secondary">TON-TEST</button>
         </div>
 
         <div class="settings-footer">
-          <button id="btn-close-settings" class="neon-btn">FERTIG / ZURÜCK</button>
+          <button id="btn-close-settings" class="circuit-btn">ZURÜCK ZUM SPIEL</button>
         </div>
       </div>
     </div>
