@@ -160,36 +160,59 @@ export class CircuitMeshBuilder {
     const dir = new THREE.Vector3(wp1.x - wp0.x, 0, wp1.z - wp0.z).normalize();
     const norm = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
 
-    // Checkered line across track
-    const lineGeo = new THREE.PlaneGeometry(this.trackWidth, 3.0);
+    // Checkered line across track laid flat on ground
+    const lineGroup = new THREE.Group();
+    lineGroup.position.set(wp0.x, 0.05, wp0.z);
+    lineGroup.rotation.y = -Math.atan2(dir.z, dir.x);
+
+    const lineGeo = new THREE.PlaneGeometry(3.0, this.trackWidth);
     const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const lineMesh = new THREE.Mesh(lineGeo, lineMat);
     lineMesh.rotation.x = -Math.PI / 2;
-    lineMesh.rotation.z = Math.atan2(dir.z, dir.x);
-    lineMesh.position.set(wp0.x, 0.05, wp0.z);
-    this.group.add(lineMesh);
+    lineGroup.add(lineMesh);
+    this.group.add(lineGroup);
 
     // Overhead Gantry Bridge
     const gantryGroup = new THREE.Group();
     const postMat = new THREE.MeshStandardMaterial({ color: 0x495057, metalness: 0.6, roughness: 0.4 });
-    const postGeo = new THREE.BoxGeometry(0.8, 8, 0.8);
+    const postGeo = new THREE.BoxGeometry(1.0, 8, 1.0);
+    const postDist = this.trackWidth * 0.5 + 2.5;
 
+    // Left Post
     const postLeft = new THREE.Mesh(postGeo, postMat);
-    postLeft.position.set(wp0.x + norm.x * (this.trackWidth * 0.5 + 2), 4, wp0.z + norm.z * (this.trackWidth * 0.5 + 2));
+    postLeft.position.set(wp0.x + norm.x * postDist, 4, wp0.z + norm.z * postDist);
     postLeft.castShadow = true;
     gantryGroup.add(postLeft);
 
+    // Right Post
     const postRight = new THREE.Mesh(postGeo, postMat);
-    postRight.position.set(wp0.x - norm.x * (this.trackWidth * 0.5 + 2), 4, wp0.z - norm.z * (this.trackWidth * 0.5 + 2));
+    postRight.position.set(wp0.x - norm.x * postDist, 4, wp0.z - norm.z * postDist);
     postRight.castShadow = true;
     gantryGroup.add(postRight);
 
-    const beamGeo = new THREE.BoxGeometry(this.trackWidth + 6, 1.2, 1.2);
+    // Crossbeam spanning between postLeft and postRight (depth along Z = trackWidth + 6)
+    const beamGeo = new THREE.BoxGeometry(1.4, 1.4, this.trackWidth + 6.0);
     const beam = new THREE.Mesh(beamGeo, postMat);
     beam.position.set(wp0.x, 8, wp0.z);
-    beam.rotation.y = Math.atan2(norm.x, norm.z);
+    beam.lookAt(postLeft.position.x, 8, postLeft.position.z);
     beam.castShadow = true;
     gantryGroup.add(beam);
+
+    // Starting lights hung under the crossbeam
+    const lightHousingMat = new THREE.MeshStandardMaterial({ color: 0x111115 });
+    const lightBulbMat = new THREE.MeshBasicMaterial({ color: 0xff2222 });
+    for (let i = -2; i <= 2; i++) {
+      const housing = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.4), lightHousingMat);
+      const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.1, 8), lightBulbMat);
+      lamp.rotation.x = Math.PI / 2;
+      lamp.position.z = 0.22;
+      housing.add(lamp);
+
+      const offsetAlongNorm = i * 2.2;
+      housing.position.set(wp0.x + norm.x * offsetAlongNorm, 7.1, wp0.z + norm.z * offsetAlongNorm);
+      housing.rotation.y = Math.atan2(dir.x, dir.z);
+      gantryGroup.add(housing);
+    }
 
     this.group.add(gantryGroup);
   }
