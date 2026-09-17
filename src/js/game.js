@@ -78,13 +78,13 @@ export class Game {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // Isometric Orthographic Camera
+    // Isometric Orthographic Camera (d=28 for closer, larger view)
     const aspect = window.innerWidth / window.innerHeight;
-    const d = 48;
+    const d = 28;
     this.camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
 
     // Camera offset for true isometric perspective
-    this.cameraOffset = new THREE.Vector3(-42, 58, 42);
+    this.cameraOffset = new THREE.Vector3(-28, 38, 28);
     this.camera.position.set(-40 + this.cameraOffset.x, this.cameraOffset.y, -40 + this.cameraOffset.z);
     this.camera.lookAt(-40, 0, -40);
 
@@ -124,8 +124,8 @@ export class Game {
         x: spot.x,
         z: spot.z,
         angle: spot.angle,
-        maxSpeed: isAI ? 92 + (i * 2) : 105,
-        acceleration: isAI ? 44 : 50
+        maxSpeed: isAI ? 58 + (i * 1.5) : 70,
+        acceleration: isAI ? 28 : 32
       });
 
       this.scene.add(car.mesh);
@@ -137,8 +137,8 @@ export class Game {
       if (isAI) {
         const ai = new RacerAI({
           waypoints: TRACK_WAYPOINTS,
-          lookaheadDistance: 16,
-          aggressiveness: 0.90 + (i * 0.05)
+          lookaheadDistance: 13,
+          aggressiveness: 0.88 + (i * 0.04)
         });
         this.aiDrivers.push(ai);
       }
@@ -338,7 +338,7 @@ export class Game {
       this.timeVal.innerText = this.formatTime(this.raceTime);
     }
     if (this.speedVal) {
-      const kmh = Math.round(Math.abs(this.player.physics.speed) * 1.8);
+      const kmh = Math.round(Math.abs(this.player.physics.speed) * 2.2);
       this.speedVal.innerText = kmh.toString().padStart(3, '0');
     }
   }
@@ -472,7 +472,7 @@ export class Game {
 
   onResize() {
     const aspect = window.innerWidth / window.innerHeight;
-    const d = 48;
+    const d = 28;
     this.camera.left = -d * aspect;
     this.camera.right = d * aspect;
     this.camera.top = d;
