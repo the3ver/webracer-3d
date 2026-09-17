@@ -36,7 +36,7 @@ export const TRACK_WAYPOINTS = [
 ];
 
 export const TRACK_CONFIG = {
-  name: 'Apex Circuit',
+  name: 'Pine Valley Circuit',
   trackWidth: 16,
   totalLaps: 3,
   playerStart: { x: -40, z: -40, angle: 0 },

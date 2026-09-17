@@ -13,7 +13,7 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     // 2. Start Screen
     const overlay = page.locator('#overlay-screen');
     await expect(overlay).toBeVisible();
-    await expect(page.locator('.circuit-title')).toContainText('APEX CIRCUIT');
+    await expect(page.locator('.circuit-title')).toContainText('PINE VALLEY');
     await expect(page.locator('#btn-start')).toBeVisible();
 
     // 3. HUD

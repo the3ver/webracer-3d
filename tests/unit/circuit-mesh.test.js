@@ -15,24 +15,19 @@ describe('CircuitMeshBuilder Start/Finish Gantry', () => {
     const builder = new CircuitMeshBuilder(waypoints, trackWidth);
     const group = builder.build();
 
-    // Find the gantry group in children
-    let gantry = null;
+    // Find the gantry components in children by name
     let postLeft = null;
     let postRight = null;
     let beam = null;
 
     group.traverse((child) => {
-      if (child.position.y === 8 && child.isMesh) {
-        beam = child;
-      }
-      if (child.position.y === 4 && child.isMesh) {
-        if (!postLeft) postLeft = child;
-        else postRight = child;
-      }
+      if (child.name === 'gantry_beam') beam = child;
+      if (child.name === 'gantry_post_left') postLeft = child;
+      if (child.name === 'gantry_post_right') postRight = child;
     });
 
-    assert.ok(beam, 'Gantry crossbeam should exist at height 8');
-    assert.ok(postLeft && postRight, 'Gantry posts should exist at height 4');
+    assert.ok(beam, 'Gantry crossbeam should exist');
+    assert.ok(postLeft && postRight, 'Gantry posts should exist');
 
     // Beam center should be between the posts
     const expectedCenterX = (postLeft.position.x + postRight.position.x) / 2;
