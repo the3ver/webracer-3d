@@ -33,4 +33,41 @@ describe('DriftParticles System', () => {
     assert.ok(p0.x !== 10 || p0.z !== 20, 'Particle should have moved');
     assert.ok(p0.y >= 0, 'Particle should stay above or at ground level');
   });
+
+  it('emits high-contrast tire smoke and debris on asphalt with visible size and colors', () => {
+    const scene = new THREE.Scene();
+    const particleSystem = new DriftParticles(scene, 50);
+
+    particleSystem.emit({
+      x: 0,
+      y: 0.2,
+      z: 0,
+      headingAngle: 0,
+      slipDirection: 1,
+      speed: 25,
+      surface: 'asphalt',
+      count: 10
+    });
+
+    const activeParticles = particleSystem.particles.filter(p => p.alive);
+    assert.equal(activeParticles.length, 10);
+
+    // Particle scale should be generous and visible (>= 1.0)
+    for (const p of activeParticles) {
+      assert.ok(p.scale >= 1.0, `Particle scale (${p.scale}) should be >= 1.0 for clear visibility`);
+    }
+
+    // Check that at least some particles have high-contrast bright smoke colors
+    let hasBrightSmoke = false;
+    const color = new THREE.Color();
+    for (let i = 0; i < 10; i++) {
+      particleSystem.mesh.getColorAt(i, color);
+      const luminance = (color.r + color.g + color.b) / 3;
+      if (luminance > 0.5) {
+        hasBrightSmoke = true;
+        break;
+      }
+    }
+    assert.ok(hasBrightSmoke, 'Asphalt drift should emit high-contrast white/light-grey smoke particles');
+  });
 });

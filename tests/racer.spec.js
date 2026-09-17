@@ -212,4 +212,55 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     // Capture screenshot of airborne jump
     await page.screenshot({ path: 'tests/screenshots/jump-ramp-flight.png' });
   });
+
+  test('Track selector switches circuit to Alpine Summit Pass and renders 3D mountain tunnel', async ({ page }) => {
+    // Check initial track is Pine Valley
+    await expect(page.locator('#circuit-title')).toContainText('PINE VALLEY');
+    await expect(page.locator('#btn-track-pine')).toHaveClass(/active/);
+
+    // Switch to Alpine Summit
+    await page.click('#btn-track-alpine');
+    await expect(page.locator('#circuit-title')).toContainText('ALPINE SUMMIT');
+    await expect(page.locator('#btn-track-alpine')).toHaveClass(/active/);
+    await expect(page.locator('#btn-track-pine')).not.toHaveClass(/active/);
+
+    // Verify game state loaded Alpine track and tunnel
+    const tunnelInfo = await page.evaluate(() => {
+      let hasTunnel = false;
+      let hasEntrance = false;
+      let hasExit = false;
+      window.game.scene.traverse((obj) => {
+        if (obj.name === 'tunnel_structure') hasTunnel = true;
+        if (obj.name === 'tunnel_portal_entrance') hasEntrance = true;
+        if (obj.name === 'tunnel_portal_exit') hasExit = true;
+      });
+      return {
+        trackId: window.game.currentTrackId,
+        hasTunnel,
+        hasEntrance,
+        hasExit
+      };
+    });
+
+    expect(tunnelInfo.trackId).toBe('alpine-summit');
+    expect(tunnelInfo.hasTunnel).toBe(true);
+    expect(tunnelInfo.hasEntrance).toBe(true);
+    expect(tunnelInfo.hasExit).toBe(true);
+
+    // Start race on Alpine Summit
+    await page.click('#btn-start');
+    await page.waitForFunction(() => window.game && window.game.state === 'RACING', { timeout: 8000 });
+
+    // Teleport player vehicle near the tunnel entrance to view the tunnel structure
+    await page.evaluate(() => {
+      const tunnel = window.game.currentTrackConfig.tunnels[0];
+      window.game.player.physics.x = tunnel.entrance.x;
+      window.game.player.physics.z = tunnel.entrance.z;
+      window.game.player.physics.angle = -Math.PI * 0.75;
+      window.game.updateCamera(0.016);
+    });
+
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: 'tests/screenshots/alpine-summit-tunnel.png' });
+  });
 });

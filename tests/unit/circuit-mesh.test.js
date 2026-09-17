@@ -93,4 +93,41 @@ describe('CircuitMeshBuilder Start/Finish Gantry', () => {
     assert.equal(rampGroup.position.x, -38);
     assert.equal(rampGroup.position.z, 73.5);
   });
+
+  it('aligns dashed centerline markings parallel to track tangent on curved segments', () => {
+    // 4 points forming a closed diagonal diamond circuit (non-axis-aligned tangents at 45 degrees)
+    const waypoints = [
+      { x: 0, z: -50 },
+      { x: 50, z: 0 },
+      { x: 0, z: 50 },
+      { x: -50, z: 0 }
+    ];
+    const builder = new CircuitMeshBuilder(waypoints, 16);
+    const group = builder.build();
+
+    const dashes = [];
+    group.traverse((child) => {
+      if (child.name === 'centerline_marking') dashes.push(child);
+    });
+
+    assert.ok(dashes.length > 20, 'Centerline dashes should be generated');
+
+    // Sample dashes across the circuit and verify their orientation aligns with tangent
+    const curve = new THREE.CatmullRomCurve3(waypoints.map(w => new THREE.Vector3(w.x, 0, w.z)), true, 'catmullrom', 0.25);
+    for (let i = 0; i < dashes.length; i += 5) {
+      const dash = dashes[i];
+      dash.updateMatrixWorld(true);
+
+      // Dash heading in world space: PlaneGeometry's long axis is local Y (0, 1, 0)
+      const dashHeading = new THREE.Vector3(0, 1, 0).transformDirection(dash.matrixWorld).normalize();
+
+      // Find closest tangent on curve
+      const u = i / dashes.length;
+      const tangent = curve.getTangentAt(u).normalize();
+
+      // Long axis of the dash should be parallel to tangent (dot product close to 1 or -1)
+      const dot = Math.abs(dashHeading.dot(tangent));
+      assert.ok(dot > 0.85, `Centerline dash ${i} must align parallel to track tangent (got dot=${dot.toFixed(3)})`);
+    }
+  });
 });

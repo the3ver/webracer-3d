@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { TRACK_WAYPOINTS, TRACK_CONFIG } from './track/track-data.js';
+import { TRACK_WAYPOINTS, TRACK_CONFIG, TRACK_PRESETS, getTrackPreset } from './track/track-data.js';
 import { CircuitTrack } from './track/circuit-track.js';
 import { CircuitMeshBuilder } from './track/circuit-mesh.js';
 import { IsometricCar } from './vehicles/isometric-car.js';
@@ -11,7 +11,9 @@ export class Game {
   constructor() {
     this.state = 'MENU'; // 'MENU' | 'COUNTDOWN' | 'RACING' | 'FINISHED'
     this.raceTime = 0.0;
-    this.totalLaps = TRACK_CONFIG.totalLaps || 3;
+    this.currentTrackId = 'pine-valley';
+    this.currentTrackConfig = getTrackPreset(this.currentTrackId);
+    this.totalLaps = this.currentTrackConfig.totalLaps || 3;
     this.countdownTimer = 3.99;
     this.isPaused = false;
     this.isSettingsOpen = false;
@@ -36,24 +38,15 @@ export class Game {
     this.setupScene();
 
     // Drift & debris particle effects
-    this.driftParticles = new DriftParticles(this.scene, 350);
+    this.driftParticles = new DriftParticles(this.scene, 500);
 
-    // Setup Track
-    this.circuitTrack = new CircuitTrack({
-      waypoints: TRACK_WAYPOINTS,
-      trackWidth: TRACK_CONFIG.trackWidth,
-      totalLaps: this.totalLaps,
-      ramps: TRACK_CONFIG.ramps
-    });
-
-    const meshBuilder = new CircuitMeshBuilder(TRACK_WAYPOINTS, TRACK_CONFIG.trackWidth, TRACK_CONFIG.ramps);
-    this.scene.add(meshBuilder.build());
-
-    // Setup Vehicles (Player + 3 AI)
+    // Setup Track and Grid
+    this.trackMeshGroup = null;
     this.vehicles = [];
     this.aiDrivers = [];
     this.trackers = [];
-    this.setupGrid();
+    this.setupTrackAndVehicles();
+    this.setupTrackSelectorUI();
 
     // Input state
     this.keys = {
@@ -112,12 +105,93 @@ export class Game {
     this.scene.add(sunLight);
   }
 
+  setupTrackAndVehicles() {
+    // Remove previous track mesh
+    if (this.trackMeshGroup) {
+      this.scene.remove(this.trackMeshGroup);
+      this.trackMeshGroup = null;
+    }
+
+    // Remove previous vehicle meshes
+    if (this.vehicles) {
+      for (const v of this.vehicles) {
+        if (v && v.mesh) this.scene.remove(v.mesh);
+      }
+    }
+
+    const cfg = this.currentTrackConfig;
+    this.totalLaps = cfg.totalLaps || 3;
+
+    this.circuitTrack = new CircuitTrack({
+      waypoints: cfg.waypoints,
+      trackWidth: cfg.trackWidth,
+      totalLaps: this.totalLaps,
+      ramps: cfg.ramps
+    });
+
+    const meshBuilder = new CircuitMeshBuilder(cfg.waypoints, cfg.trackWidth, cfg.ramps, {
+      theme: cfg.theme,
+      tunnels: cfg.tunnels
+    });
+    this.trackMeshGroup = meshBuilder.build();
+    this.scene.add(this.trackMeshGroup);
+
+    this.setupGrid();
+
+    // Reset camera to player start position
+    const pStart = cfg.playerStart || cfg.waypoints[0];
+    if (this.camera && this.cameraOffset) {
+      this.camera.position.set(pStart.x + this.cameraOffset.x, this.cameraOffset.y, pStart.z + this.cameraOffset.z);
+      this.camera.lookAt(pStart.x, 0, pStart.z);
+    }
+  }
+
+  loadTrack(trackId) {
+    if (!TRACK_PRESETS[trackId]) return;
+    this.currentTrackId = trackId;
+    this.currentTrackConfig = getTrackPreset(trackId);
+    this.setupTrackAndVehicles();
+    this.updateTrackSelectorUI();
+  }
+
+  setupTrackSelectorUI() {
+    const btnPine = document.getElementById('btn-track-pine');
+    const btnAlpine = document.getElementById('btn-track-alpine');
+    if (btnPine) {
+      btnPine.addEventListener('click', () => this.loadTrack('pine-valley'));
+    }
+    if (btnAlpine) {
+      btnAlpine.addEventListener('click', () => this.loadTrack('alpine-summit'));
+    }
+    this.updateTrackSelectorUI();
+  }
+
+  updateTrackSelectorUI() {
+    const btnPine = document.getElementById('btn-track-pine');
+    const btnAlpine = document.getElementById('btn-track-alpine');
+    const titleEl = document.getElementById('circuit-title');
+    const subTitleEl = document.getElementById('circuit-subtitle');
+
+    if (btnPine) btnPine.classList.toggle('active', this.currentTrackId === 'pine-valley');
+    if (btnAlpine) btnAlpine.classList.toggle('active', this.currentTrackId === 'alpine-summit');
+
+    if (titleEl) {
+      titleEl.innerText = this.currentTrackId === 'alpine-summit' ? 'ALPINE SUMMIT' : 'PINE VALLEY';
+    }
+    if (subTitleEl) {
+      subTitleEl.innerText = this.currentTrackId === 'alpine-summit'
+        ? '// HIGH MOUNTAIN PASS & ROCK TUNNEL //'
+        : '// GRAND PRIX CIRCUIT //';
+    }
+  }
+
   setupGrid() {
     this.vehicles = [];
     this.aiDrivers = [];
     this.trackers = [];
 
-    const spots = TRACK_CONFIG.gridSpots;
+    const cfg = this.currentTrackConfig;
+    const spots = cfg.gridSpots;
     for (let i = 0; i < spots.length; i++) {
       const spot = spots[i];
       const isAI = i > 0;
@@ -141,7 +215,7 @@ export class Game {
 
       if (isAI) {
         const ai = new RacerAI({
-          waypoints: TRACK_WAYPOINTS,
+          waypoints: cfg.waypoints,
           lookaheadDistance: 11,
           aggressiveness: 0.86 + (i * 0.04)
         });
@@ -315,7 +389,9 @@ export class Game {
     // 4. Emit drift particles (stones, mud, tire rubber) flying sideways & backwards
     for (const car of this.vehicles) {
       const p = car.physics;
-      const isDrifting = p.isDrifting || (Math.abs(p.slipAngle) > 0.18 && Math.abs(p.speed) > 8);
+      const isDrifting = p.isDrifting ||
+        (Math.abs(p.slipAngle) > 0.07 && Math.abs(p.speed) > 7) ||
+        (this.keys.handbrake && car === this.player && Math.abs(p.speed) > 4);
       if (isDrifting && this.driftParticles) {
         const fX = Math.cos(p.angle);
         const fZ = Math.sin(p.angle);
@@ -447,8 +523,18 @@ export class Game {
     ctx.fillStyle = 'rgba(15, 23, 42, 0.75)';
     ctx.fillRect(0, 0, w, h);
 
-    // Map bounds: approx [-140, 200] in X, [-60, 140] in Z
-    const minX = -150, maxX = 210, minZ = -60, maxZ = 120;
+    // Dynamic map bounds from current track waypoints
+    const waypoints = this.currentTrackConfig.waypoints;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const wp of waypoints) {
+      if (wp.x < minX) minX = wp.x;
+      if (wp.x > maxX) maxX = wp.x;
+      if (wp.z < minZ) minZ = wp.z;
+      if (wp.z > maxZ) maxZ = wp.z;
+    }
+    const pad = 25;
+    minX -= pad; maxX += pad; minZ -= pad; maxZ += pad;
+
     const scaleX = w / (maxX - minX);
     const scaleZ = h / (maxZ - minZ);
 
@@ -459,8 +545,8 @@ export class Game {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    for (let i = 0; i < TRACK_WAYPOINTS.length; i++) {
-      const wp = TRACK_WAYPOINTS[i];
+    for (let i = 0; i < waypoints.length; i++) {
+      const wp = waypoints[i];
       const mx = toMapX(wp.x);
       const my = toMapY(wp.z);
       if (i === 0) ctx.moveTo(mx, my);
@@ -511,7 +597,7 @@ export class Game {
 
   restartRace() {
     if (this.finishModal) this.finishModal.classList.add('hidden');
-    const spots = TRACK_CONFIG.gridSpots;
+    const spots = this.currentTrackConfig.gridSpots;
     for (let i = 0; i < this.vehicles.length; i++) {
       const car = this.vehicles[i];
       const spot = spots[i];

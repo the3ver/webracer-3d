@@ -79,4 +79,28 @@ describe('ArcadePhysics Jump Mechanics', () => {
     assert.ok(Math.abs(worldShadowY - 0.03) < 0.001, 'Drop shadow should stay on ground plane');
     assert.ok(car.shadowMesh.material.opacity < 0.45, 'Shadow should diffuse/fade as car gains altitude');
   });
+
+  it('disables steering heading change and preserves horizontal velocity while airborne', () => {
+    const car = new ArcadePhysics({
+      x: 0,
+      z: 0,
+      angle: Math.PI,
+      speed: 30
+    });
+
+    const initialAngle = car.angle;
+    const initialVx = car.vx;
+    const initialVz = car.vz;
+
+    // Launch into air
+    car.launchJump(14.0);
+    assert.equal(car.isAirborne, true);
+
+    // Try hard steering while airborne
+    car.update(0.2, { throttle: 1, steer: 1.0 });
+
+    assert.equal(car.angle, initialAngle, 'Heading angle should not rotate while airborne');
+    assert.equal(car.vx, initialVx, 'Horizontal vx should remain unaffected by steering while airborne');
+    assert.equal(car.vz, initialVz, 'Horizontal vz should remain unaffected by steering while airborne');
+  });
 });

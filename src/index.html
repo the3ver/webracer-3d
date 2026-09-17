@@ -57,8 +57,21 @@
     <!-- Start Screen Overlay -->
     <div id="overlay-screen" class="visible">
       <div class="overlay-content">
-        <h1 class="circuit-title">PINE VALLEY</h1>
-        <h2 class="sub-title">// GRAND PRIX CIRCUIT //</h2>
+        <h1 class="circuit-title" id="circuit-title">PINE VALLEY</h1>
+        <h2 class="sub-title" id="circuit-subtitle">// GRAND PRIX CIRCUIT //</h2>
+        
+        <!-- Track Selector -->
+        <div class="track-selector">
+          <span class="selector-label">STRECKE WÄHLEN:</span>
+          <div class="track-btn-group">
+            <button id="btn-track-pine" class="track-select-btn active" data-track="pine-valley">
+              🌲 Pine Valley (Sprungschanze)
+            </button>
+            <button id="btn-track-alpine" class="track-select-btn" data-track="alpine-summit">
+              🏔️ Alpine Summit (Tunnel)
+            </button>
+          </div>
+        </div>
         
         <div class="controls-guide">
           <div class="control-row"><span>GAS / BREMSE:</span><strong>W / S oder Pfeil Oben/Unten</strong></div>

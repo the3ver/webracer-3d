@@ -12,8 +12,8 @@ export class DriftParticles {
     this.particles = [];
     this.nextIndex = 0;
 
-    // Single draw-call instanced mesh for small 3D pebbles and debris
-    const geo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+    // Single draw-call instanced mesh for 3D tire smoke puffs, pebbles and debris
+    const geo = new THREE.BoxGeometry(0.55, 0.55, 0.55);
     const mat = new THREE.MeshStandardMaterial({
       roughness: 0.9,
       metalness: 0.1,
@@ -81,13 +81,13 @@ export class DriftParticles {
     let colors;
     if (surface === 'grass') {
       // Mud chunks and grass turf
-      colors = [0x582f0e, 0x7f4f24, 0x936639, 0x472d17, 0x2d6a4f];
+      colors = [0x582f0e, 0x7f4f24, 0x936639, 0x472d17, 0x55a630];
     } else if (surface === 'curb') {
-      // Paint chips and rubber
-      colors = [0xd90429, 0xf8f9fa, 0x222222];
+      // Paint chips, sparks and rubber
+      colors = [0xd90429, 0xffffff, 0xffd166, 0x222222];
     } else {
-      // Tarmac rubber crumbs & smoke gravel
-      colors = [0x222222, 0x333333, 0x444444, 0x666666];
+      // High-contrast billowy white/silver tire smoke & friction sparks
+      colors = [0xffffff, 0xf2f4f7, 0xd8dde4, 0xffe169, 0xcccccc, 0x333333];
     }
 
     const fX = Math.cos(headingAngle);
@@ -99,8 +99,8 @@ export class DriftParticles {
       const p = this.particles[this.nextIndex];
       p.alive = true;
       p.life = 0;
-      p.maxLife = 0.4 + Math.random() * 0.4;
-      p.scale = (surface === 'grass' ? 1.3 : 0.9) + Math.random() * 0.5;
+      p.maxLife = 0.45 + Math.random() * 0.45;
+      p.scale = (surface === 'grass' ? 1.5 : 1.25) + Math.random() * 0.5;
 
       p.x = x + (Math.random() - 0.5) * 0.5;
       p.y = Math.max(0.12, y + Math.random() * 0.2);
@@ -168,7 +168,8 @@ export class DriftParticles {
       p.rotY += p.rotSpeedY * dt;
 
       const progress = p.life / p.maxLife;
-      const currentScale = Math.max(0.1, p.scale * (1.0 - progress * 0.7));
+      const expand = 1.0 + progress * 0.6; // Smoke billows and expands outwards
+      const currentScale = Math.max(0.15, p.scale * expand * (1.0 - progress * 0.5));
 
       this.dummy.position.set(p.x, p.y, p.z);
       this.dummy.rotation.set(p.rotX, p.rotY, p.rotZ);

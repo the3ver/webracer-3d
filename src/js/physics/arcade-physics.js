@@ -63,7 +63,19 @@ export class ArcadePhysics {
       this.justLanded = false;
     }
 
-    // Longitudinal acceleration / braking
+    // If vehicle is airborne in flight: preserve ballistic momentum and disable ground steering
+    if (this.isAirborne || this.y > 0) {
+      this.speed = Math.hypot(this.vx, this.vz);
+      this.slipAngle = 0;
+      this.isDrifting = false;
+
+      // Position integration in mid-air
+      this.x += this.vx * dt;
+      this.z += this.vz * dt;
+      return;
+    }
+
+    // Longitudinal acceleration / braking (ground contact)
     if (throttle > 0) {
       if (this.speed < surfaceMaxSpeed) {
         this.speed += this.acceleration * throttle * surfaceFriction * dt;
@@ -87,7 +99,7 @@ export class ArcadePhysics {
       }
     }
 
-    // Steering adjusts heading
+    // Steering adjusts heading (ground contact)
     if (Math.abs(this.speed) > 0.5) {
       const dir = this.speed >= 0 ? 1 : -1;
       const steerMultiplier = handbrake ? 1.3 : 1.0; // slightly more rotation authority during drift
@@ -123,7 +135,7 @@ export class ArcadePhysics {
       this.slipAngle = 0;
     }
 
-    this.isDrifting = (handbrake || this.slipAngle > 0.35) && currentSpeed > 15;
+    this.isDrifting = (handbrake || this.slipAngle > 0.20) && currentSpeed > 10;
 
     // Position integration
     this.x += this.vx * dt;

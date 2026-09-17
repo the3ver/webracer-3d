@@ -11,10 +11,13 @@ import * as THREE from 'three';
  * - Scenic valley landscape: pine/fir forests, deciduous trees, rock boulders, hill silhouettes
  */
 export class CircuitMeshBuilder {
-  constructor(waypoints, trackWidth = 16, ramps = []) {
+  constructor(waypoints, trackWidth = 16, ramps = [], options = {}) {
     this.waypoints = waypoints;
     this.trackWidth = trackWidth;
-    this.ramps = ramps;
+    this.ramps = ramps || [];
+    this.options = options || {};
+    this.theme = this.options.theme || 'pine-valley';
+    this.tunnels = this.options.tunnels || [];
     this.group = new THREE.Group();
   }
 
@@ -27,7 +30,12 @@ export class CircuitMeshBuilder {
     this.buildStartFinishLine();
     this.buildGrandstandAndPits();
     this.buildJumpRamps();
-    this.buildPineValleyProps();
+    this.buildTunnels();
+    if (this.theme === 'alpine-summit') {
+      this.buildAlpineSummitProps();
+    } else {
+      this.buildPineValleyProps();
+    }
     return this.group;
   }
 
@@ -56,7 +64,7 @@ export class CircuitMeshBuilder {
       { x: -180, z: -150, r: 80, h: 32 },
       { x: 0, z: -200, r: 90, h: 38 },
       { x: 180, z: -160, r: 85, h: 35 },
-      { x: 240, z: 20, r: 95, h: 42 },
+      { x: 300, z: 20, r: 85, h: 42 },
       { x: 200, z: 180, r: 90, h: 36 },
       { x: 30, z: 220, r: 80, h: 30 },
       { x: -160, z: 180, r: 85, h: 34 },
@@ -66,6 +74,7 @@ export class CircuitMeshBuilder {
     hillDefs.forEach(h => {
       const hillGeo = new THREE.ConeGeometry(h.r, h.h, 7);
       const hill = new THREE.Mesh(hillGeo, hillMat);
+      hill.name = 'background_hill';
       hill.position.set(h.x, h.h * 0.45 - 2, h.z);
       hill.castShadow = false;
       this.group.add(hill);
@@ -143,8 +152,9 @@ export class CircuitMeshBuilder {
       const dir = new THREE.Vector3().subVectors(nextPt, pt).normalize();
 
       const dash = new THREE.Mesh(dashGeo, lineMat);
+      dash.rotation.order = 'YXZ';
+      dash.rotation.y = Math.atan2(dir.x, dir.z) + Math.PI;
       dash.rotation.x = -Math.PI / 2;
-      dash.rotation.z = -Math.atan2(dir.x, dir.z);
       dash.position.set(pt.x, 0.03, pt.z);
       dash.name = 'centerline_marking';
       this.group.add(dash);
@@ -687,6 +697,222 @@ export class CircuitMeshBuilder {
       boardGroup.position.set(180 - idx * 10, 0, 30 + idx * 15);
       boardGroup.rotation.y = Math.PI / 4;
       this.group.add(boardGroup);
+    });
+  }
+
+  buildTunnels() {
+    if (!this.tunnels || this.tunnels.length === 0) return;
+
+    const concreteMat = new THREE.MeshStandardMaterial({
+      color: 0x4a4e54, // weathered alpine tunnel concrete
+      roughness: 0.9,
+      metalness: 0.1
+    });
+    const rockMat = new THREE.MeshStandardMaterial({
+      color: 0x2b2d30, // dark rugged mountain granite
+      roughness: 0.95,
+      metalness: 0.05
+    });
+    const portalFrameMat = new THREE.MeshStandardMaterial({
+      color: 0x242426,
+      roughness: 0.8,
+      metalness: 0.2
+    });
+    const hazardMatYellow = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+    const hazardMatBlack = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const lightMat = new THREE.MeshBasicMaterial({ color: 0xffe066 }); // warm interior tunnel lamps
+
+    for (const tunnel of this.tunnels) {
+      const tunnelGroup = new THREE.Group();
+      tunnelGroup.name = 'tunnel_structure';
+
+      // Path of the tunnel from entrance through midpoint to exit
+      const points = [
+        new THREE.Vector3(tunnel.entrance.x, 0, tunnel.entrance.z),
+        new THREE.Vector3(tunnel.midpoint.x, 0, tunnel.midpoint.z),
+        new THREE.Vector3(tunnel.exit.x, 0, tunnel.exit.z)
+      ];
+      const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.2);
+      const divisions = 24;
+      const sampled = curve.getPoints(divisions);
+      const halfW = (tunnel.width || 19) * 0.5;
+      const H = tunnel.height || 6.5;
+
+      // 1. Entrance Portal
+      const entrancePt = sampled[0];
+      const entranceNext = sampled[1];
+      const entranceDir = new THREE.Vector3().subVectors(entranceNext, entrancePt).normalize();
+
+      const entrancePortal = new THREE.Group();
+      entrancePortal.name = 'tunnel_portal_entrance';
+      entrancePortal.position.set(entrancePt.x, 0, entrancePt.z);
+      entrancePortal.rotation.order = 'YXZ';
+      entrancePortal.rotation.y = Math.atan2(entranceDir.x, entranceDir.z) + Math.PI;
+
+      // Portal massive arch posts and lintel
+      const postL = new THREE.Mesh(new THREE.BoxGeometry(2.2, H + 1.5, 2.8), portalFrameMat);
+      postL.position.set(-halfW - 0.5, (H + 1.5) * 0.5, 0);
+      entrancePortal.add(postL);
+
+      const postR = new THREE.Mesh(new THREE.BoxGeometry(2.2, H + 1.5, 2.8), portalFrameMat);
+      postR.position.set(halfW + 0.5, (H + 1.5) * 0.5, 0);
+      entrancePortal.add(postR);
+
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(halfW * 2 + 4.2, 2.4, 3.2), portalFrameMat);
+      lintel.position.set(0, H + 1.2, 0);
+      entrancePortal.add(lintel);
+
+      // Warning clearance stripe along portal
+      for (let s = 0; s < 10; s++) {
+        const seg = new THREE.Mesh(
+          new THREE.BoxGeometry((halfW * 2 + 2.0) / 10, 0.4, 0.2),
+          s % 2 === 0 ? hazardMatYellow : hazardMatBlack
+        );
+        seg.position.set(-halfW + (s + 0.5) * ((halfW * 2) / 10), H - 0.2, 1.6);
+        entrancePortal.add(seg);
+      }
+      tunnelGroup.add(entrancePortal);
+
+      // 2. Exit Portal
+      const exitPt = sampled[divisions];
+      const exitPrev = sampled[divisions - 1];
+      const exitDir = new THREE.Vector3().subVectors(exitPt, exitPrev).normalize();
+
+      const exitPortal = new THREE.Group();
+      exitPortal.name = 'tunnel_portal_exit';
+      exitPortal.position.set(exitPt.x, 0, exitPt.z);
+      exitPortal.rotation.order = 'YXZ';
+      exitPortal.rotation.y = Math.atan2(exitDir.x, exitDir.z) + Math.PI;
+
+      const exitPostL = new THREE.Mesh(new THREE.BoxGeometry(2.2, H + 1.5, 2.8), portalFrameMat);
+      exitPostL.position.set(-halfW - 0.5, (H + 1.5) * 0.5, 0);
+      exitPortal.add(exitPostL);
+
+      const exitPostR = new THREE.Mesh(new THREE.BoxGeometry(2.2, H + 1.5, 2.8), portalFrameMat);
+      exitPostR.position.set(halfW + 0.5, (H + 1.5) * 0.5, 0);
+      exitPortal.add(exitPostR);
+
+      const exitLintel = new THREE.Mesh(new THREE.BoxGeometry(halfW * 2 + 4.2, 2.4, 3.2), portalFrameMat);
+      exitLintel.position.set(0, H + 1.2, 0);
+      exitPortal.add(exitLintel);
+      tunnelGroup.add(exitPortal);
+
+      // 3. Curved Gallery Arches, Pillars, Mountain Wall and Overhead Roof
+      for (let i = 0; i < divisions; i++) {
+        const pt = sampled[i];
+        const next = sampled[Math.min(divisions, i + 1)];
+        const segDir = new THREE.Vector3().subVectors(next, pt).normalize();
+        const segNorm = new THREE.Vector3(-segDir.z, 0, segDir.x).normalize();
+        const segLen = pt.distanceTo(next);
+
+        // Mountain solid back wall (on mountain side)
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(2.4, H + 1.0, segLen + 0.5), rockMat);
+        wall.position.set(pt.x + segNorm.x * (halfW + 1.0), (H + 1.0) * 0.5, pt.z + segNorm.z * (halfW + 1.0));
+        wall.rotation.order = 'YXZ';
+        wall.rotation.y = Math.atan2(segDir.x, segDir.z) + Math.PI;
+        wall.castShadow = true;
+        tunnelGroup.add(wall);
+
+        // Valley side arched pillars (every second segment for open gallery vista)
+        if (i % 2 === 0) {
+          const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.4, H, 1.4), concreteMat);
+          pillar.position.set(pt.x - segNorm.x * halfW, H * 0.5, pt.z - segNorm.z * halfW);
+          pillar.castShadow = true;
+          tunnelGroup.add(pillar);
+        }
+
+        // Overhead concrete roof beam/rib across the tunnel
+        if (i % 2 === 0) {
+          const rib = new THREE.Mesh(new THREE.BoxGeometry(halfW * 2 + 3.0, 0.9, 1.8), concreteMat);
+          rib.position.set(pt.x, H + 0.45, pt.z);
+          rib.rotation.order = 'YXZ';
+          rib.rotation.y = Math.atan2(segDir.x, segDir.z) + Math.PI;
+          rib.castShadow = true;
+          tunnelGroup.add(rib);
+
+          // Glowing overhead amber tunnel light fixture
+          const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.2, 1.2), lightMat);
+          lamp.position.set(pt.x, H - 0.1, pt.z);
+          lamp.rotation.order = 'YXZ';
+          lamp.rotation.y = Math.atan2(segDir.x, segDir.z) + Math.PI;
+          tunnelGroup.add(lamp);
+        }
+      }
+
+      this.group.add(tunnelGroup);
+    }
+  }
+
+  buildAlpineSummitProps() {
+    const snowMat = new THREE.MeshStandardMaterial({ color: 0xfafaff, roughness: 0.8 });
+    const cliffMat = new THREE.MeshStandardMaterial({ color: 0x474a51, roughness: 0.95 });
+    const larchMat = new THREE.MeshStandardMaterial({ color: 0x2b4c30, roughness: 0.85 });
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 0.9 });
+
+    // Jagged snow-capped alpine peaks around the circuit
+    const peaks = [
+      { x: -160, z: -120, r: 85, h: 48, snowH: 18 },
+      { x: 0, z: -180, r: 90, h: 54, snowH: 22 },
+      { x: 180, z: -110, r: 95, h: 52, snowH: 20 },
+      { x: 230, z: 80, r: 90, h: 50, snowH: 19 },
+      { x: 140, z: 190, r: 85, h: 46, snowH: 16 },
+      { x: -50, z: 200, r: 90, h: 50, snowH: 18 },
+      { x: -180, z: 140, r: 85, h: 45, snowH: 17 },
+      { x: -210, z: 0, r: 95, h: 55, snowH: 22 }
+    ];
+
+    peaks.forEach(p => {
+      const peakGroup = new THREE.Group();
+      peakGroup.name = 'alpine_peak';
+
+      // Lower mountain cliff base
+      const baseGeo = new THREE.ConeGeometry(p.r, p.h, 7);
+      const baseMesh = new THREE.Mesh(baseGeo, cliffMat);
+      baseMesh.position.y = p.h * 0.45;
+      peakGroup.add(baseMesh);
+
+      // White snow-cap on the mountain top
+      const capGeo = new THREE.ConeGeometry(p.r * (p.snowH / p.h), p.snowH, 7);
+      const capMesh = new THREE.Mesh(capGeo, snowMat);
+      capMesh.position.y = p.h * 0.45 + (p.h - p.snowH) * 0.5;
+      peakGroup.add(capMesh);
+
+      peakGroup.position.set(p.x, -2, p.z);
+      this.group.add(peakGroup);
+    });
+
+    // High alpine larch and pine trees
+    const treePositions = [
+      { x: -20, z: -30, s: 1.0 },
+      { x: 20, z: -35, s: 1.2 },
+      { x: 70, z: -30, s: 1.1 },
+      { x: -80, z: 40, s: 1.3 },
+      { x: -30, z: 50, s: 1.0 },
+      { x: 40, z: 50, s: 1.2 },
+      { x: 15, z: 75, s: 0.9 },
+      { x: 70, z: 90, s: 1.1 },
+      { x: 140, z: 10, s: 1.3 },
+      { x: -140, z: -40, s: 1.2 }
+    ];
+
+    treePositions.forEach(tp => {
+      const tree = new THREE.Group();
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3 * tp.s, 0.45 * tp.s, 2.0 * tp.s, 5), trunkMat);
+      trunk.position.y = 1.0 * tp.s;
+      tree.add(trunk);
+
+      for (let c = 0; c < 3; c++) {
+        const cone = new THREE.Mesh(
+          new THREE.ConeGeometry((2.0 - c * 0.4) * tp.s, (2.8 - c * 0.3) * tp.s, 6),
+          larchMat
+        );
+        cone.position.y = (1.8 + c * 1.5) * tp.s;
+        cone.castShadow = true;
+        tree.add(cone);
+      }
+
+      tree.position.set(tp.x, 0, tp.z);
+      this.group.add(tree);
     });
   }
 }
