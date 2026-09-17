@@ -5,6 +5,7 @@ import { CircuitMeshBuilder } from './track/circuit-mesh.js';
 import { IsometricCar } from './vehicles/isometric-car.js';
 import { RacerAI } from './ai/racer-ai.js';
 import { EngineAudio } from './audio/engine-audio.js';
+import { DriftParticles } from './effects/drift-particles.js';
 
 export class Game {
   constructor() {
@@ -33,6 +34,9 @@ export class Game {
 
     // Setup Three.js Scene & Renderer
     this.setupScene();
+
+    // Drift & debris particle effects
+    this.driftParticles = new DriftParticles(this.scene, 350);
 
     // Setup Track
     this.circuitTrack = new CircuitTrack({
@@ -214,6 +218,10 @@ export class Game {
       this.renderRadar();
     }
 
+    if (this.driftParticles) {
+      this.driftParticles.update(dt);
+    }
+
     this.updateCamera(dt);
   }
 
@@ -267,6 +275,53 @@ export class Game {
       const input = ai.computeInput(car.physics, tracker.nextCheckpointIndex, this.vehicles.map(v => v.physics));
       const surface = this.circuitTrack.getTrackSurfaceAt(car.physics.x, car.physics.z);
       car.update(dt, input, surface);
+    }
+
+    // 3. Emit drift particles (stones, mud, tire rubber) flying sideways & backwards
+    for (const car of this.vehicles) {
+      const p = car.physics;
+      const isDrifting = p.isDrifting || (Math.abs(p.slipAngle) > 0.18 && Math.abs(p.speed) > 8);
+      if (isDrifting && this.driftParticles) {
+        const fX = Math.cos(p.angle);
+        const fZ = Math.sin(p.angle);
+        const rX = -fZ;
+        const rZ = fX;
+
+        // Determine slip direction: +1 when sliding right, -1 when sliding left
+        const vLateral = p.vx * rX + p.vz * rZ;
+        const slipDir = vLateral >= 0 ? 1 : -1;
+
+        const surface = this.circuitTrack.getTrackSurfaceAt(p.x, p.z);
+        const count = surface.surface === 'grass' ? 3 : 2;
+
+        // Emit from rear tire positions
+        const rearOffset = -1.4;
+        const halfTireTrack = 1.1;
+
+        // Left rear tire
+        this.driftParticles.emit({
+          x: p.x + fX * rearOffset + rX * halfTireTrack,
+          y: 0.15,
+          z: p.z + fZ * rearOffset + rZ * halfTireTrack,
+          headingAngle: p.angle,
+          slipDirection: slipDir,
+          speed: Math.abs(p.speed),
+          surface: surface.surface,
+          count
+        });
+
+        // Right rear tire
+        this.driftParticles.emit({
+          x: p.x + fX * rearOffset - rX * halfTireTrack,
+          y: 0.15,
+          z: p.z + fZ * rearOffset - rZ * halfTireTrack,
+          headingAngle: p.angle,
+          slipDirection: slipDir,
+          speed: Math.abs(p.speed),
+          surface: surface.surface,
+          count
+        });
+      }
     }
   }
 
