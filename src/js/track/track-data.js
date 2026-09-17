@@ -45,5 +45,17 @@ export const TRACK_CONFIG = {
     { x: -40, z: -36, angle: 0, color: 0x4361ee, name: 'Rival Blue (Apex)' },
     { x: -55, z: -44, angle: 0, color: 0xfb8500, name: 'Rival Orange (Viper)' },
     { x: -55, z: -36, angle: 0, color: 0x2ec4b6, name: 'Rival Teal (Specter)' }
+  ],
+  ramps: [
+    {
+      id: 'back_straight_ramp',
+      x: -38,
+      z: 73.5, // right lane (leaving z=63..70 as flat bypass lane)
+      width: 6.5,
+      length: 8.0,
+      height: 2.2,
+      liftVelocity: 14.5,
+      angle: Math.PI // facing -X
+    }
   ]
 };

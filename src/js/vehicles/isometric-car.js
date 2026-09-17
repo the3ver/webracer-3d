@@ -33,6 +33,10 @@ export class IsometricCar {
   createCarMesh() {
     const carGroup = new THREE.Group();
 
+    // Visual chassis group (body, cabin, wing, wheels) that can tilt/pitch independently of shadow
+    this.chassis = new THREE.Group();
+    carGroup.add(this.chassis);
+
     // Chassis / Body
     const bodyGeo = new THREE.BoxGeometry(4.0, 0.9, 2.2);
     const bodyMat = new THREE.MeshStandardMaterial({
@@ -43,7 +47,7 @@ export class IsometricCar {
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.position.y = 0.7;
     body.castShadow = true;
-    carGroup.add(body);
+    this.chassis.add(body);
 
     // Cockpit / Cabin
     const cabinGeo = new THREE.BoxGeometry(2.0, 0.7, 1.6);
@@ -55,7 +59,7 @@ export class IsometricCar {
     const cabin = new THREE.Mesh(cabinGeo, cabinMat);
     cabin.position.set(-0.3, 1.4, 0);
     cabin.castShadow = true;
-    carGroup.add(cabin);
+    this.chassis.add(cabin);
 
     // Rear Spoiler Wing
     const wingGeo = new THREE.BoxGeometry(0.5, 0.1, 2.2);
@@ -63,35 +67,35 @@ export class IsometricCar {
     const wing = new THREE.Mesh(wingGeo, wingMat);
     wing.position.set(-1.8, 1.45, 0);
     wing.castShadow = true;
-    carGroup.add(wing);
+    this.chassis.add(wing);
 
     // Wing Struts
     const strutGeo = new THREE.BoxGeometry(0.1, 0.5, 0.1);
     const strutL = new THREE.Mesh(strutGeo, wingMat);
     strutL.position.set(-1.8, 1.15, 0.7);
-    carGroup.add(strutL);
+    this.chassis.add(strutL);
     const strutR = new THREE.Mesh(strutGeo, wingMat);
     strutR.position.set(-1.8, 1.15, -0.7);
-    carGroup.add(strutR);
+    this.chassis.add(strutR);
 
     // Headlights
     const lightGeo = new THREE.BoxGeometry(0.15, 0.2, 0.4);
     const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffcc });
     const lightL = new THREE.Mesh(lightGeo, lightMat);
     lightL.position.set(2.0, 0.7, 0.7);
-    carGroup.add(lightL);
+    this.chassis.add(lightL);
     const lightR = new THREE.Mesh(lightGeo, lightMat);
     lightR.position.set(2.0, 0.7, -0.7);
-    carGroup.add(lightR);
+    this.chassis.add(lightR);
 
     // Taillights
     const tailMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
     const tailL = new THREE.Mesh(lightGeo, tailMat);
     tailL.position.set(-2.0, 0.7, 0.7);
-    carGroup.add(tailL);
+    this.chassis.add(tailL);
     const tailR = new THREE.Mesh(lightGeo, tailMat);
     tailR.position.set(-2.0, 0.7, -0.7);
-    carGroup.add(tailR);
+    this.chassis.add(tailR);
 
     // Wheels
     const wheelGeo = new THREE.CylinderGeometry(0.48, 0.48, 0.4, 12);
@@ -128,22 +132,22 @@ export class IsometricCar {
     this.wheels.rl.position.set(-1.3, 0.48, 1.15);
     this.wheels.rr.position.set(-1.3, 0.48, -1.15);
 
-    carGroup.add(this.wheels.fl);
-    carGroup.add(this.wheels.fr);
-    carGroup.add(this.wheels.rl);
-    carGroup.add(this.wheels.rr);
+    this.chassis.add(this.wheels.fl);
+    this.chassis.add(this.wheels.fr);
+    this.chassis.add(this.wheels.rl);
+    this.chassis.add(this.wheels.rr);
 
-    // Drop shadow plane
+    // Drop shadow plane (stays at ground level)
     const shadowGeo = new THREE.PlaneGeometry(4.8, 2.8);
     const shadowMat = new THREE.MeshBasicMaterial({
       color: 0x000000,
       transparent: true,
       opacity: 0.45
     });
-    const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
-    shadowMesh.rotation.x = -Math.PI / 2;
-    shadowMesh.position.y = 0.03;
-    carGroup.add(shadowMesh);
+    this.shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+    this.shadowMesh.rotation.x = -Math.PI / 2;
+    this.shadowMesh.position.y = 0.03;
+    carGroup.add(this.shadowMesh);
 
     return carGroup;
   }
@@ -153,10 +157,25 @@ export class IsometricCar {
 
     // Update 3D mesh position and rotation
     this.mesh.position.x = this.physics.x;
+    this.mesh.position.y = this.physics.y;
     this.mesh.position.z = this.physics.z;
     // Three.js rotation: in our coordinate system, heading 0 is +X, heading PI/2 is +Z
     // In Three.js: rotation.y = -physics.angle
     this.mesh.rotation.y = -this.physics.angle;
+
+    // Chassis pitch tilt when jumping/airborne
+    if (this.chassis) {
+      this.chassis.rotation.z = this.physics.pitch;
+    }
+
+    // Keep drop shadow planted at ground level (y ≈ 0.03 in world space)
+    if (this.shadowMesh) {
+      this.shadowMesh.position.y = 0.03 - this.physics.y;
+      const heightRatio = Math.min(1.0, this.physics.y / 6.0);
+      this.shadowMesh.material.opacity = 0.45 * (1.0 - heightRatio * 0.55);
+      const s = Math.max(0.65, 1.0 - heightRatio * 0.25);
+      this.shadowMesh.scale.set(s, s, 1.0);
+    }
 
     // Wheel animation
     const speed = Math.hypot(this.physics.vx, this.physics.vz);

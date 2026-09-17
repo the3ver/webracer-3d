@@ -167,4 +167,49 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     await expect(page.locator('#podium-list')).toBeVisible();
     await expect(page.locator('#btn-restart')).toBeVisible();
   });
+
+  test('Jump ramp exists in 3D scene and launches vehicle into air with visible height', async ({ page }) => {
+    await page.click('#btn-start');
+    await page.waitForFunction(() => window.game && window.game.state === 'RACING', { timeout: 8000 });
+
+    // 1. Verify 3D ramp object exists in scene
+    const hasRampMesh = await page.evaluate(() => {
+      let found = false;
+      window.game.scene.traverse((obj) => {
+        if (obj.name === 'jump_ramp_back_straight_ramp') found = true;
+      });
+      return found;
+    });
+    expect(hasRampMesh).toBe(true);
+
+    // 2. Test vehicle jump trigger on ramp lane
+    await page.evaluate(() => {
+      // Place car right before the ramp heading -X at racing speed
+      const ramp = window.game.circuitTrack.ramps[0];
+      window.game.player.physics.x = ramp.x + 3.0; // approaching ramp from +X
+      window.game.player.physics.z = ramp.z;       // on ramp lane
+      window.game.player.physics.angle = Math.PI;  // heading -X
+      window.game.player.physics.speed = 35;
+      window.game.player.physics.vx = -35;
+      window.game.player.physics.vz = 0;
+    });
+
+    // Run game loop for a few ticks to trigger ramp launch
+    await page.waitForFunction(() => window.game.player.physics.isAirborne && window.game.player.physics.y > 0.5, { timeout: 4000 });
+
+    const jumpData = await page.evaluate(() => ({
+      isAirborne: window.game.player.physics.isAirborne,
+      altitude: window.game.player.physics.y,
+      meshY: window.game.player.mesh.position.y,
+      shadowWorldY: window.game.player.mesh.position.y + window.game.player.shadowMesh.position.y
+    }));
+
+    expect(jumpData.isAirborne).toBe(true);
+    expect(jumpData.altitude).toBeGreaterThan(0.5);
+    expect(jumpData.meshY).toBe(jumpData.altitude);
+    expect(Math.abs(jumpData.shadowWorldY - 0.03)).toBeLessThan(0.01);
+
+    // Capture screenshot of airborne jump
+    await page.screenshot({ path: 'tests/screenshots/jump-ramp-flight.png' });
+  });
 });

@@ -11,9 +11,10 @@ import * as THREE from 'three';
  * - Scenic valley landscape: pine/fir forests, deciduous trees, rock boulders, hill silhouettes
  */
 export class CircuitMeshBuilder {
-  constructor(waypoints, trackWidth = 16) {
+  constructor(waypoints, trackWidth = 16, ramps = []) {
     this.waypoints = waypoints;
     this.trackWidth = trackWidth;
+    this.ramps = ramps;
     this.group = new THREE.Group();
   }
 
@@ -25,6 +26,7 @@ export class CircuitMeshBuilder {
     this.buildCurbsAndBarriers();
     this.buildStartFinishLine();
     this.buildGrandstandAndPits();
+    this.buildJumpRamps();
     this.buildPineValleyProps();
     return this.group;
   }
@@ -423,6 +425,144 @@ export class CircuitMeshBuilder {
     pitBuilding.position.set(wp0.x - norm.x * pitDist + dir.x * 20, 0, wp0.z - norm.z * pitDist + dir.z * 20);
     pitBuilding.rotation.y = Math.atan2(dir.x, dir.z) + Math.PI;
     this.group.add(pitBuilding);
+  }
+
+  buildJumpRamps() {
+    if (!this.ramps || this.ramps.length === 0) return;
+
+    const rampMat = new THREE.MeshStandardMaterial({
+      color: 0x1f2421,
+      roughness: 0.85,
+      metalness: 0.15
+    });
+
+    const chevronMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+    const hazardLipMatYellow = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+    const hazardLipMatBlack = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const guardrailMat = new THREE.MeshStandardMaterial({
+      color: 0xd90429,
+      roughness: 0.4,
+      metalness: 0.5
+    });
+    const postMat = new THREE.MeshStandardMaterial({
+      color: 0x4a4e69,
+      roughness: 0.6,
+      metalness: 0.4
+    });
+    const pylonMat = new THREE.MeshStandardMaterial({
+      color: 0xff7b00,
+      roughness: 0.4,
+      metalness: 0.1
+    });
+    const lightMat = new THREE.MeshBasicMaterial({ color: 0xffdd00 });
+
+    for (const ramp of this.ramps) {
+      const rampGroup = new THREE.Group();
+      rampGroup.name = `jump_ramp_${ramp.id}`;
+      rampGroup.position.set(ramp.x, 0, ramp.z);
+      if (typeof ramp.angle === 'number') {
+        rampGroup.rotation.y = ramp.angle;
+      }
+
+      const L = ramp.length;
+      const W = ramp.width;
+      const H = ramp.height;
+      const inclineAngle = Math.atan2(H, L);
+      const slopeLength = Math.hypot(L, H);
+
+      // 1. Wedge Ramp Prism
+      const shape = new THREE.Shape();
+      shape.moveTo(-L / 2, 0.02);
+      shape.lineTo(L / 2, H);
+      shape.lineTo(L / 2, 0.02);
+      shape.closePath();
+
+      const extrudeSettings = {
+        depth: W,
+        bevelEnabled: false
+      };
+      const wedgeGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+      wedgeGeo.translate(0, 0, -W / 2);
+
+      const wedgeMesh = new THREE.Mesh(wedgeGeo, rampMat);
+      wedgeMesh.castShadow = true;
+      wedgeMesh.receiveShadow = true;
+      rampGroup.add(wedgeMesh);
+
+      // 2. High-visibility Chevron boost arrows along the incline
+      const numChevrons = 3;
+      for (let c = 1; c <= numChevrons; c++) {
+        const t = c / (numChevrons + 1);
+        const cx = -L / 2 + t * L;
+        const cy = t * H + 0.03;
+
+        const armLength = W * 0.28;
+        const armGeo = new THREE.BoxGeometry(0.3, 0.04, armLength);
+
+        const leftArm = new THREE.Mesh(armGeo, chevronMat);
+        leftArm.position.set(cx - 0.2, cy, armLength * 0.4);
+        leftArm.rotation.z = inclineAngle;
+        leftArm.rotation.y = 0.45;
+        rampGroup.add(leftArm);
+
+        const rightArm = new THREE.Mesh(armGeo, chevronMat);
+        rightArm.position.set(cx - 0.2, cy, -armLength * 0.4);
+        rightArm.rotation.z = inclineAngle;
+        rightArm.rotation.y = -0.45;
+        rampGroup.add(rightArm);
+      }
+
+      // 3. Hazard Takeoff Lip (alternating black/yellow stripes along top edge)
+      const numLipSegments = 8;
+      const segmentWidth = W / numLipSegments;
+      for (let s = 0; s < numLipSegments; s++) {
+        const segGeo = new THREE.BoxGeometry(0.25, 0.25, segmentWidth);
+        const segMat = s % 2 === 0 ? hazardLipMatYellow : hazardLipMatBlack;
+        const segMesh = new THREE.Mesh(segGeo, segMat);
+        segMesh.position.set(L / 2 - 0.1, H - 0.05, -W / 2 + (s + 0.5) * segmentWidth);
+        rampGroup.add(segMesh);
+      }
+
+      // 4. Safety Guardrails along Left and Right edges of the ramp
+      const railGeo = new THREE.BoxGeometry(slopeLength, 0.35, 0.12);
+      const postGeo = new THREE.CylinderGeometry(0.08, 0.08, 1, 6);
+
+      [-W / 2, W / 2].forEach(sideZ => {
+        const rail = new THREE.Mesh(railGeo, guardrailMat);
+        rail.position.set(0, H * 0.5 + 0.35, sideZ);
+        rail.rotation.z = inclineAngle;
+        rampGroup.add(rail);
+
+        const numPosts = 4;
+        for (let p = 0; p < numPosts; p++) {
+          const pt = p / (numPosts - 1);
+          const px = -L / 2 + pt * L;
+          const py = pt * H;
+          const post = new THREE.Mesh(postGeo, postMat);
+          post.scale.set(1, Math.max(0.4, py + 0.6), 1);
+          post.position.set(px, (py + 0.6) * 0.5, sideZ);
+          rampGroup.add(post);
+        }
+      });
+
+      // 5. Entrance Warning Pylons on both sides of entrance
+      [-W / 2 - 0.5, W / 2 + 0.5].forEach(pz => {
+        const pylonGroup = new THREE.Group();
+        pylonGroup.position.set(-L / 2 - 0.6, 0, pz);
+
+        const cone = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.1, 8), pylonMat);
+        cone.position.y = 0.55;
+        pylonGroup.add(cone);
+
+        const light = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), lightMat);
+        light.position.y = 1.15;
+        pylonGroup.add(light);
+
+        rampGroup.add(pylonGroup);
+      });
+
+      this.group.add(rampGroup);
+    }
   }
 
   buildPineValleyProps() {

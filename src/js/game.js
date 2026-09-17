@@ -42,10 +42,11 @@ export class Game {
     this.circuitTrack = new CircuitTrack({
       waypoints: TRACK_WAYPOINTS,
       trackWidth: TRACK_CONFIG.trackWidth,
-      totalLaps: this.totalLaps
+      totalLaps: this.totalLaps,
+      ramps: TRACK_CONFIG.ramps
     });
 
-    const meshBuilder = new CircuitMeshBuilder(TRACK_WAYPOINTS, TRACK_CONFIG.trackWidth);
+    const meshBuilder = new CircuitMeshBuilder(TRACK_WAYPOINTS, TRACK_CONFIG.trackWidth, TRACK_CONFIG.ramps);
     this.scene.add(meshBuilder.build());
 
     // Setup Vehicles (Player + 3 AI)
@@ -277,7 +278,41 @@ export class Game {
       car.update(dt, input, surface);
     }
 
-    // 3. Emit drift particles (stones, mud, tire rubber) flying sideways & backwards
+    // 3. Jump Ramps and Landing Effects
+    for (const car of this.vehicles) {
+      const p = car.physics;
+
+      // Check jump ramp trigger
+      const ramp = this.circuitTrack.checkRamp(p.x, p.z, p.radius);
+      if (ramp && !p.isAirborne && Math.abs(p.speed) > 6) {
+        const speedRatio = Math.min(1.25, Math.max(0.65, Math.abs(p.speed) / 35.0));
+        p.launchJump(ramp.liftVelocity * speedRatio);
+        if (car === this.player) {
+          this.audioSynth.playBeep(true);
+        }
+      }
+
+      // Check touchdown landing effects
+      if (p.justLanded) {
+        if (car === this.player) {
+          this.audioSynth.playImpact();
+        }
+        if (this.driftParticles) {
+          this.driftParticles.emit({
+            x: p.x,
+            y: 0.12,
+            z: p.z,
+            headingAngle: p.angle,
+            slipDirection: 0,
+            speed: Math.abs(p.speed) + 12,
+            surface: 'asphalt',
+            count: 10
+          });
+        }
+      }
+    }
+
+    // 4. Emit drift particles (stones, mud, tire rubber) flying sideways & backwards
     for (const car of this.vehicles) {
       const p = car.physics;
       const isDrifting = p.isDrifting || (Math.abs(p.slipAngle) > 0.18 && Math.abs(p.speed) > 8);
@@ -328,6 +363,10 @@ export class Game {
   checkCollisions() {
     // Vehicle to Barrier collisions
     for (const car of this.vehicles) {
+      // Allow airborne vehicles flying high above ground to clear barriers
+      if (car.physics.isAirborne && car.physics.y > 1.2) {
+        continue;
+      }
       const barrier = this.circuitTrack.checkBarrierCollision(car.physics.x, car.physics.z, car.physics.radius);
       if (barrier) {
         const collided = car.physics.resolveBarrierCollision(barrier, 0.45);

@@ -7,6 +7,7 @@ export class CircuitTrack {
     this.waypoints = options.waypoints || [];
     this.trackWidth = options.trackWidth || 16;
     this.totalLaps = options.totalLaps || 3;
+    this.ramps = options.ramps || [];
     this.segments = [];
     this.totalLength = 0;
 
@@ -215,5 +216,28 @@ export class CircuitTrack {
       }
       return (b.totalRaceDistance || 0) - (a.totalRaceDistance || 0);
     });
+  }
+
+  /**
+   * Checks if a vehicle drives onto a jump ramp
+   * @param {number} x
+   * @param {number} z
+   * @param {number} radius
+   * @returns {Object|null}
+   */
+  checkRamp(x, z, radius = 1.8) {
+    if (!this.ramps || this.ramps.length === 0) return null;
+
+    for (const ramp of this.ramps) {
+      const halfLen = ramp.length * 0.5;
+      const halfWidth = ramp.width * 0.5;
+      const inX = Math.abs(x - ramp.x) <= (halfLen + radius * 0.4);
+      const inZ = Math.abs(z - ramp.z) <= (halfWidth + radius * 0.4);
+
+      if (inX && inZ) {
+        return ramp;
+      }
+    }
+    return null;
   }
 }

@@ -23,6 +23,20 @@ export class ArcadePhysics {
     this.normalGrip = options.normalGrip || 8.0; // lateral friction coefficient
     this.driftGrip = options.driftGrip || 2.2;   // lower lateral friction when drifting/handbrake
     this.radius = options.radius || 1.8; // collision bounding radius
+
+    // Vertical / Jump Physics
+    this.y = options.y || 0;
+    this.vy = options.vy || 0;
+    this.isAirborne = false;
+    this.justLanded = false;
+    this.pitch = 0;
+  }
+
+  launchJump(verticalVelocity = 12.0) {
+    if (this.isAirborne) return;
+    this.vy = Math.max(7.0, verticalVelocity);
+    this.isAirborne = true;
+    this.justLanded = false;
   }
 
   update(dt, input = {}, surface = { friction: 1.0, maxSpeedMultiplier: 1.0, grip: 1.0 }) {
@@ -30,6 +44,24 @@ export class ArcadePhysics {
     const surfaceFriction = surface?.friction ?? 1.0;
     const surfaceMaxSpeed = this.maxSpeed * (surface?.maxSpeedMultiplier ?? 1.0);
     const surfaceGrip = surface?.grip ?? 1.0;
+
+    // Vertical Jump / Gravity Integration
+    if (this.isAirborne || this.y > 0) {
+      const gravity = 22.0;
+      this.vy -= gravity * dt;
+      this.y += this.vy * dt;
+      this.pitch = Math.max(-0.28, Math.min(0.28, this.vy * 0.022));
+
+      if (this.y <= 0) {
+        this.y = 0;
+        this.vy = 0;
+        this.isAirborne = false;
+        this.justLanded = true;
+        this.pitch = 0;
+      }
+    } else {
+      this.justLanded = false;
+    }
 
     // Longitudinal acceleration / braking
     if (throttle > 0) {

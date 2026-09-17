@@ -64,4 +64,33 @@ describe('CircuitMeshBuilder Start/Finish Gantry', () => {
 
     assert.ok(distToPostL < 2.0, `Beam endpoint must connect to postLeft (got distance ${distToPostL})`);
   });
+
+  it('builds jump ramp 3D meshes with hazard stripes and warning markers', () => {
+    const waypoints = [
+      { x: 0, z: -40 },
+      { x: 40, z: -40 }
+    ];
+    const ramps = [
+      {
+        id: 'back_straight_ramp',
+        x: -38,
+        z: 73.5,
+        width: 6.5,
+        length: 8.0,
+        height: 2.2,
+        angle: Math.PI
+      }
+    ];
+    const builder = new CircuitMeshBuilder(waypoints, 16, ramps);
+    const group = builder.build();
+
+    let rampGroup = null;
+    group.traverse((child) => {
+      if (child.name === 'jump_ramp_back_straight_ramp') rampGroup = child;
+    });
+
+    assert.ok(rampGroup, 'Jump ramp group should exist in scene graph');
+    assert.equal(rampGroup.position.x, -38);
+    assert.equal(rampGroup.position.z, 73.5);
+  });
 });
