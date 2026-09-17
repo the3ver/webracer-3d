@@ -62,9 +62,9 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     // Accelerate with W
     await page.keyboard.down('KeyW');
     await page.waitForFunction(() => window.game.player.physics.speed > 15, { timeout: 8000 });
+    const acceleratedSpeed = await page.evaluate(() => window.game.player.physics.speed);
     await page.keyboard.up('KeyW');
 
-    const acceleratedSpeed = await page.evaluate(() => window.game.player.physics.speed);
     expect(acceleratedSpeed).toBeGreaterThan(15);
 
     // Speedometer displays speed

@@ -18,10 +18,10 @@ export class IsometricCar {
       z: options.z || 0,
       angle: options.angle || 0,
       speed: 0,
-      maxSpeed: options.maxSpeed || (this.isAI ? 62 : 70),
-      acceleration: options.acceleration || 32,
-      brakeDecel: options.brakeDecel || 55,
-      steerSpeed: options.steerSpeed || 2.2,
+      maxSpeed: options.maxSpeed || (this.isAI ? 44 : 50),
+      acceleration: options.acceleration || 22,
+      brakeDecel: options.brakeDecel || 40,
+      steerSpeed: options.steerSpeed || 1.85,
       radius: 2.0
     });
 

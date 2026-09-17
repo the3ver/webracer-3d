@@ -124,8 +124,8 @@ export class Game {
         x: spot.x,
         z: spot.z,
         angle: spot.angle,
-        maxSpeed: isAI ? 58 + (i * 1.5) : 70,
-        acceleration: isAI ? 28 : 32
+        maxSpeed: isAI ? 42 + (i * 1.5) : 50,
+        acceleration: isAI ? 19 : 22
       });
 
       this.scene.add(car.mesh);
@@ -137,8 +137,8 @@ export class Game {
       if (isAI) {
         const ai = new RacerAI({
           waypoints: TRACK_WAYPOINTS,
-          lookaheadDistance: 13,
-          aggressiveness: 0.88 + (i * 0.04)
+          lookaheadDistance: 11,
+          aggressiveness: 0.86 + (i * 0.04)
         });
         this.aiDrivers.push(ai);
       }
@@ -338,7 +338,7 @@ export class Game {
       this.timeVal.innerText = this.formatTime(this.raceTime);
     }
     if (this.speedVal) {
-      const kmh = Math.round(Math.abs(this.player.physics.speed) * 2.2);
+      const kmh = Math.round(Math.abs(this.player.physics.speed) * 3.0);
       this.speedVal.innerText = kmh.toString().padStart(3, '0');
     }
   }
