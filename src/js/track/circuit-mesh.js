@@ -216,8 +216,16 @@ export class CircuitMeshBuilder {
     const curbW = 1.6;
     const barrierDist = halfW + 3.8;
 
-    const curbRedMat = new THREE.MeshStandardMaterial({ color: 0xd90429, roughness: 0.65 });
-    const curbWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8f9fa, roughness: 0.65 });
+    const curbRedMat = new THREE.MeshStandardMaterial({
+      color: 0xd90429,
+      roughness: 0.65,
+      side: THREE.DoubleSide
+    });
+    const curbWhiteMat = new THREE.MeshStandardMaterial({
+      color: 0xf8f9fa,
+      roughness: 0.65,
+      side: THREE.DoubleSide
+    });
     const tireMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.95 });
     const tireRedMat = new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.9 });
 
@@ -228,34 +236,80 @@ export class CircuitMeshBuilder {
     const tireGeo = new THREE.CylinderGeometry(1.2, 1.2, 1.4, 8);
     const bannerGeo = new THREE.BoxGeometry(4.2, 1.2, 0.4);
 
+    // Compute smooth tangents and normals at each sampled vertex along the track
+    const normals = [];
     for (let i = 0; i < divisions; i++) {
-      const pt = sampledPoints[i];
-      const nextPt = sampledPoints[(i + 1) % divisions];
-      const dir = new THREE.Vector3().subVectors(nextPt, pt).normalize();
-      const norm = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+      const prev = sampledPoints[(i - 1 + divisions) % divisions];
+      const next = sampledPoints[(i + 1) % divisions];
+      const tan = new THREE.Vector3().subVectors(next, prev).normalize();
+      normals.push(new THREE.Vector3(-tan.z, 0, tan.x).normalize());
+    }
 
-      // Alternating 3D curbs
-      const curbColorMat = (i % 2 === 0) ? curbRedMat : curbWhiteMat;
-      const curbBoxGeo = new THREE.BoxGeometry(curbW, 0.14, 2.2);
+    // Geometry buffers for alternating red and white curbs
+    const redPositions = [];
+    const whitePositions = [];
 
-      const curbLeft = new THREE.Mesh(curbBoxGeo, curbColorMat);
-      curbLeft.position.set(pt.x + norm.x * (halfW + curbW * 0.5), 0.05, pt.z + norm.z * (halfW + curbW * 0.5));
-      curbLeft.rotation.y = Math.atan2(dir.x, dir.z);
-      this.group.add(curbLeft);
+    const addQuad = (buffer, p0, p1, p2, p3) => {
+      // Triangle 1: p0, p1, p2
+      buffer.push(p0.x, p0.y, p0.z);
+      buffer.push(p1.x, p1.y, p1.z);
+      buffer.push(p2.x, p2.y, p2.z);
+      // Triangle 2: p0, p2, p3
+      buffer.push(p0.x, p0.y, p0.z);
+      buffer.push(p2.x, p2.y, p2.z);
+      buffer.push(p3.x, p3.y, p3.z);
+    };
 
-      const curbRight = new THREE.Mesh(curbBoxGeo, curbColorMat);
-      curbRight.position.set(pt.x - norm.x * (halfW + curbW * 0.5), 0.05, pt.z - norm.z * (halfW + curbW * 0.5));
-      curbRight.rotation.y = Math.atan2(dir.x, dir.z);
-      this.group.add(curbRight);
+    const yInner = 0.035; // slightly above asphalt at 0.01
+    const yOuter = 0.055; // slightly raised outer curb edge
 
-      // Barriers & Sponsor Hoardings
+    for (let i = 0; i < divisions; i++) {
+      const nextI = (i + 1) % divisions;
+      const pt0 = sampledPoints[i];
+      const pt1 = sampledPoints[nextI];
+      const n0 = normals[i];
+      const n1 = normals[nextI];
+
+      const isRed = (i % 2 === 0);
+      const targetBuffer = isRed ? redPositions : whitePositions;
+
+      // 1. Left Curb (outside +norm):
+      const leftInner0 = new THREE.Vector3(pt0.x + n0.x * halfW, yInner, pt0.z + n0.z * halfW);
+      const leftOuter0 = new THREE.Vector3(pt0.x + n0.x * (halfW + curbW), yOuter, pt0.z + n0.z * (halfW + curbW));
+      const leftOuter1 = new THREE.Vector3(pt1.x + n1.x * (halfW + curbW), yOuter, pt1.z + n1.z * (halfW + curbW));
+      const leftInner1 = new THREE.Vector3(pt1.x + n1.x * halfW, yInner, pt1.z + n1.z * halfW);
+
+      addQuad(targetBuffer, leftInner0, leftOuter0, leftOuter1, leftInner1);
+
+      // Outer bevel drop face for Left Curb
+      const leftDrop0 = new THREE.Vector3(pt0.x + n0.x * (halfW + curbW), -0.05, pt0.z + n0.z * (halfW + curbW));
+      const leftDrop1 = new THREE.Vector3(pt1.x + n1.x * (halfW + curbW), -0.05, pt1.z + n1.z * (halfW + curbW));
+      addQuad(targetBuffer, leftOuter0, leftDrop0, leftDrop1, leftOuter1);
+
+      // 2. Right Curb (outside -norm):
+      const rightInner0 = new THREE.Vector3(pt0.x - n0.x * halfW, yInner, pt0.z - n0.z * halfW);
+      const rightOuter0 = new THREE.Vector3(pt0.x - n0.x * (halfW + curbW), yOuter, pt0.z - n0.z * (halfW + curbW));
+      const rightOuter1 = new THREE.Vector3(pt1.x - n1.x * (halfW + curbW), yOuter, pt1.z - n1.z * (halfW + curbW));
+      const rightInner1 = new THREE.Vector3(pt1.x - n1.x * halfW, yInner, pt1.z - n1.z * halfW);
+
+      addQuad(targetBuffer, rightInner0, rightInner1, rightOuter1, rightOuter0);
+
+      // Outer bevel drop face for Right Curb
+      const rightDrop0 = new THREE.Vector3(pt0.x - n0.x * (halfW + curbW), -0.05, pt0.z - n0.z * (halfW + curbW));
+      const rightDrop1 = new THREE.Vector3(pt1.x - n1.x * (halfW + curbW), -0.05, pt1.z - n1.z * (halfW + curbW));
+      addQuad(targetBuffer, rightOuter0, rightOuter1, rightDrop1, rightDrop0);
+
+      // 3. Barriers & Sponsor Hoardings
       if (i % 2 === 0) {
+        const dir = new THREE.Vector3().subVectors(pt1, pt0).normalize();
+        const norm = n0;
+
         // Place colorful sponsor advertising banner every 6 intervals
         if (i % 6 === 0) {
           const bannerMat = (i % 18 === 0) ? bannerRedMat : ((i % 12 === 0) ? bannerBlueMat : bannerYellowMat);
           const banner = new THREE.Mesh(bannerGeo, bannerMat);
           banner.name = 'sponsor_banner';
-          banner.position.set(pt.x + norm.x * (barrierDist + 0.5), 0.9, pt.z + norm.z * (barrierDist + 0.5));
+          banner.position.set(pt0.x + norm.x * (barrierDist + 0.5), 0.9, pt0.z + norm.z * (barrierDist + 0.5));
           banner.rotation.y = Math.atan2(dir.x, dir.z);
           banner.castShadow = true;
           this.group.add(banner);
@@ -263,17 +317,34 @@ export class CircuitMeshBuilder {
           // Double tire stack
           const mat = (i % 4 === 0) ? tireRedMat : tireMat;
           const barrierLeft = new THREE.Mesh(tireGeo, mat);
-          barrierLeft.position.set(pt.x + norm.x * barrierDist, 0.7, pt.z + norm.z * barrierDist);
+          barrierLeft.position.set(pt0.x + norm.x * barrierDist, 0.7, pt0.z + norm.z * barrierDist);
           barrierLeft.castShadow = true;
           this.group.add(barrierLeft);
         }
 
         const barrierRight = new THREE.Mesh(tireGeo, tireMat);
-        barrierRight.position.set(pt.x - norm.x * barrierDist, 0.7, pt.z - norm.z * barrierDist);
+        barrierRight.position.set(pt0.x - norm.x * barrierDist, 0.7, pt0.z - norm.z * barrierDist);
         barrierRight.castShadow = true;
         this.group.add(barrierRight);
       }
     }
+
+    // Build unified red and white curb meshes
+    const redGeo = new THREE.BufferGeometry();
+    redGeo.setAttribute('position', new THREE.Float32BufferAttribute(redPositions, 3));
+    redGeo.computeVertexNormals();
+    const curbsRed = new THREE.Mesh(redGeo, curbRedMat);
+    curbsRed.name = 'curbs_red';
+    curbsRed.receiveShadow = true;
+    this.group.add(curbsRed);
+
+    const whiteGeo = new THREE.BufferGeometry();
+    whiteGeo.setAttribute('position', new THREE.Float32BufferAttribute(whitePositions, 3));
+    whiteGeo.computeVertexNormals();
+    const curbsWhite = new THREE.Mesh(whiteGeo, curbWhiteMat);
+    curbsWhite.name = 'curbs_white';
+    curbsWhite.receiveShadow = true;
+    this.group.add(curbsWhite);
   }
 
   buildStartFinishLine() {
@@ -408,11 +479,12 @@ export class CircuitMeshBuilder {
     // Position grandstand outside track on main straight
     const standDist = this.trackWidth * 0.5 + 16;
     grandstand.position.set(wp0.x + norm.x * standDist + dir.x * 20, 0, wp0.z + norm.z * standDist + dir.z * 20);
-    grandstand.rotation.y = Math.atan2(dir.x, dir.z);
+    grandstand.rotation.y = Math.atan2(-dir.z, dir.x);
     this.group.add(grandstand);
 
     // 2. Pit Lane Building opposite the main straight
     const pitBuilding = new THREE.Group();
+    pitBuilding.name = 'pit_building';
     const wallMat = new THREE.MeshStandardMaterial({ color: 0xe5e9f0, roughness: 0.7 });
     const shutterMat = new THREE.MeshStandardMaterial({ color: 0x2e3440, roughness: 0.4 });
 
@@ -433,7 +505,7 @@ export class CircuitMeshBuilder {
     // Position pit building on opposite side
     const pitDist = this.trackWidth * 0.5 + 15;
     pitBuilding.position.set(wp0.x - norm.x * pitDist + dir.x * 20, 0, wp0.z - norm.z * pitDist + dir.z * 20);
-    pitBuilding.rotation.y = Math.atan2(dir.x, dir.z) + Math.PI;
+    pitBuilding.rotation.y = Math.atan2(-dir.z, dir.x) + Math.PI;
     this.group.add(pitBuilding);
   }
 
