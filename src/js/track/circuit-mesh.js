@@ -83,7 +83,7 @@ export class CircuitMeshBuilder {
 
   buildTrackRibbon() {
     const points = this.waypoints.map(w => new THREE.Vector3(w.x, 0, w.z));
-    const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.25);
+    const curve = new THREE.CatmullRomCurve3(points, true, 'centripetal');
     const divisions = 200;
     const sampledPoints = curve.getPoints(divisions);
 
@@ -94,12 +94,18 @@ export class CircuitMeshBuilder {
 
     const halfW = this.trackWidth * 0.5;
 
+    // Compute smooth central difference normals to avoid polygon pinching/folding at sharp corners
+    const normals = [];
+    for (let i = 0; i < divisions; i++) {
+      const prev = sampledPoints[(i - 1 + divisions) % divisions];
+      const next = sampledPoints[(i + 1) % divisions];
+      const tan = new THREE.Vector3().subVectors(next, prev).normalize();
+      normals.push(new THREE.Vector3(-tan.z, 0, tan.x).normalize());
+    }
+
     for (let i = 0; i <= divisions; i++) {
       const pt = sampledPoints[i % divisions];
-      const nextPt = sampledPoints[(i + 1) % divisions];
-
-      const dir = new THREE.Vector3().subVectors(nextPt, pt).normalize();
-      const norm = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+      const norm = normals[i % divisions];
 
       const leftX = pt.x + norm.x * halfW;
       const leftZ = pt.z + norm.z * halfW;
@@ -109,7 +115,7 @@ export class CircuitMeshBuilder {
       positions.push(leftX, 0.01, leftZ);
       positions.push(rightX, 0.01, rightZ);
 
-      const v = i / divisions * 40;
+      const v = (i / divisions) * 40;
       uvs.push(0, v);
       uvs.push(1, v);
 
@@ -139,23 +145,28 @@ export class CircuitMeshBuilder {
   buildCenterline() {
     // Dashed white racing centerline
     const points = this.waypoints.map(w => new THREE.Vector3(w.x, 0, w.z));
-    const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.25);
+    const curve = new THREE.CatmullRomCurve3(points, true, 'centripetal');
     const divisions = 180;
     const sampledPoints = curve.getPoints(divisions);
 
-    const lineMat = new THREE.MeshBasicMaterial({ color: 0xdddddd });
+    const lineMat = new THREE.MeshBasicMaterial({
+      color: 0xdddddd,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
+    });
     const dashGeo = new THREE.PlaneGeometry(0.35, 1.8);
 
     for (let i = 0; i < divisions; i += 2) {
-      const pt = sampledPoints[i];
-      const nextPt = sampledPoints[(i + 1) % divisions];
-      const dir = new THREE.Vector3().subVectors(nextPt, pt).normalize();
+      const prev = sampledPoints[(i - 1 + divisions) % divisions];
+      const next = sampledPoints[(i + 1) % divisions];
+      const dir = new THREE.Vector3().subVectors(next, prev).normalize();
 
       const dash = new THREE.Mesh(dashGeo, lineMat);
       dash.rotation.order = 'YXZ';
       dash.rotation.y = Math.atan2(dir.x, dir.z) + Math.PI;
       dash.rotation.x = -Math.PI / 2;
-      dash.position.set(pt.x, 0.03, pt.z);
+      dash.position.set(sampledPoints[i].x, 0.02, sampledPoints[i].z);
       dash.name = 'centerline_marking';
       this.group.add(dash);
     }
@@ -164,7 +175,7 @@ export class CircuitMeshBuilder {
   buildGravelTraps() {
     // Gravel runoff zones placed at high speed corners
     const points = this.waypoints.map(w => new THREE.Vector3(w.x, 0, w.z));
-    const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.25);
+    const curve = new THREE.CatmullRomCurve3(points, true, 'centripetal');
     const divisions = 160;
     const sampledPoints = curve.getPoints(divisions);
 
@@ -208,7 +219,7 @@ export class CircuitMeshBuilder {
 
   buildCurbsAndBarriers() {
     const points = this.waypoints.map(w => new THREE.Vector3(w.x, 0, w.z));
-    const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom', 0.25);
+    const curve = new THREE.CatmullRomCurve3(points, true, 'centripetal');
     const divisions = 160;
     const sampledPoints = curve.getPoints(divisions);
 
@@ -752,24 +763,6 @@ export class CircuitMeshBuilder {
       { x: -130, z: -10, s: 1.5 }
     ];
     rockPositions.forEach(r => this.group.add(createRockCluster(r.x, r.z, r.s)));
-
-    // Distance braking boards before the Hairpin (150m, 100m, 50m)
-    const boardMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const boardPostMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
-    [150, 100, 50].forEach((dist, idx) => {
-      const boardGroup = new THREE.Group();
-      const board = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.2, 0.1), boardMat);
-      board.position.y = 1.4;
-      boardGroup.add(board);
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.4, 6), boardPostMat);
-      post.position.y = 0.7;
-      boardGroup.add(post);
-
-      // Positioned alongside the approach to Turn 2 / Hairpin (x: 170..150, z: 40..80)
-      boardGroup.position.set(180 - idx * 10, 0, 30 + idx * 15);
-      boardGroup.rotation.y = Math.PI / 4;
-      this.group.add(boardGroup);
-    });
   }
 
   buildTunnels() {

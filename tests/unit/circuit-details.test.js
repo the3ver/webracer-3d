@@ -136,4 +136,73 @@ describe('Pine Valley Circuit Theme & Details', () => {
       }
     }
   });
+
+  it('guarantees that all track ribbon triangles have positive non-inverted area (no folded black wedges/spikes)', () => {
+    const builder = new CircuitMeshBuilder(TRACK_WAYPOINTS, TRACK_CONFIG.trackWidth);
+    const group = builder.build();
+
+    let asphalt = null;
+    group.traverse((o) => {
+      if (o.isMesh && o.material && o.material.color && o.material.color.getHexString() === '1f2022') {
+        asphalt = o;
+      }
+    });
+
+    assert.ok(asphalt, 'Asphalt mesh should exist');
+    const pos = asphalt.geometry.getAttribute('position');
+    const idx = asphalt.geometry.getIndex();
+
+    let invertedTriangles = 0;
+    for (let i = 0; i < idx.count; i += 3) {
+      const i0 = idx.getX(i);
+      const i1 = idx.getX(i + 1);
+      const i2 = idx.getX(i + 2);
+      const p0 = new THREE.Vector3(pos.getX(i0), 0, pos.getZ(i0));
+      const p1 = new THREE.Vector3(pos.getX(i1), 0, pos.getZ(i1));
+      const p2 = new THREE.Vector3(pos.getX(i2), 0, pos.getZ(i2));
+
+      // Signed area in XZ plane
+      const signedArea = 0.5 * ((p1.x - p0.x) * (p2.z - p0.z) - (p2.x - p0.x) * (p1.z - p0.z));
+      if (signedArea <= 0.0) {
+        invertedTriangles++;
+      }
+    }
+
+    assert.equal(invertedTriangles, 0, `Expected zero inverted triangles in track ribbon, found ${invertedTriangles}`);
+  });
+
+  it('ensures that scenery decor props in Pine Valley remain outside the track surface', () => {
+    const builder = new CircuitMeshBuilder(TRACK_WAYPOINTS, TRACK_CONFIG.trackWidth);
+    const group = builder.build();
+
+    const curvePoints = TRACK_WAYPOINTS.map(w => new THREE.Vector3(w.x, 0, w.z));
+    const curve = new THREE.CatmullRomCurve3(curvePoints, true, 'centripetal');
+    const sampledPoints = curve.getPoints(300);
+    const halfW = TRACK_CONFIG.trackWidth * 0.5;
+
+    // Check decor props: rocks and birch trees
+    const rockPositions = [
+      { x: 15, z: 10 },
+      { x: 120, z: -10 },
+      { x: 160, z: 90 },
+      { x: -70, z: 30 },
+      { x: -130, z: -10 }
+    ];
+    const birchPositions = [
+      { x: -30, z: -75 },
+      { x: 90, z: -10 },
+      { x: 50, z: 50 },
+      { x: -10, z: 80 }
+    ];
+
+    const allDecor = [...rockPositions, ...birchPositions];
+    for (const decor of allDecor) {
+      let minDist = Infinity;
+      for (const pt of sampledPoints) {
+        const d = Math.hypot(decor.x - pt.x, decor.z - pt.z);
+        if (d < minDist) minDist = d;
+      }
+      assert.ok(minDist >= halfW, `Decor at (${decor.x}, ${decor.z}) encroaches on track! Min distance to track: ${minDist.toFixed(2)}m (halfW=${halfW}m)`);
+    }
+  });
 });

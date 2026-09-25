@@ -42,4 +42,41 @@ describe('Track Presets & Alpine Summit Circuit', () => {
     assert.ok(portalEntranceFound, 'Tunnel entrance portal should exist');
     assert.ok(portalExitFound, 'Tunnel exit portal should exist');
   });
+
+  it('guarantees that Alpine Summit track ribbon has zero inverted triangles', () => {
+    const alpine = getTrackPreset('alpine-summit');
+    const builder = new CircuitMeshBuilder(alpine.waypoints, alpine.trackWidth, alpine.ramps, {
+      theme: 'alpine-summit',
+      tunnels: alpine.tunnels
+    });
+    const group = builder.build();
+
+    let asphalt = null;
+    group.traverse((o) => {
+      if (o.isMesh && o.material && o.material.color && o.material.color.getHexString() === '1f2022') {
+        asphalt = o;
+      }
+    });
+
+    assert.ok(asphalt, 'Alpine asphalt mesh should exist');
+    const pos = asphalt.geometry.getAttribute('position');
+    const idx = asphalt.geometry.getIndex();
+
+    let invertedTriangles = 0;
+    for (let i = 0; i < idx.count; i += 3) {
+      const i0 = idx.getX(i);
+      const i1 = idx.getX(i + 1);
+      const i2 = idx.getX(i + 2);
+      const p0 = { x: pos.getX(i0), z: pos.getZ(i0) };
+      const p1 = { x: pos.getX(i1), z: pos.getZ(i1) };
+      const p2 = { x: pos.getX(i2), z: pos.getZ(i2) };
+
+      const signedArea = 0.5 * ((p1.x - p0.x) * (p2.z - p0.z) - (p2.x - p0.x) * (p1.z - p0.z));
+      if (signedArea <= 0.0) {
+        invertedTriangles++;
+      }
+    }
+
+    assert.equal(invertedTriangles, 0, `Expected zero inverted triangles in Alpine Summit track ribbon, found ${invertedTriangles}`);
+  });
 });
