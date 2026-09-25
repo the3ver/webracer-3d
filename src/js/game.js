@@ -389,10 +389,15 @@ export class Game {
     // 4. Emit drift particles (stones, mud, tire rubber) flying sideways & backwards
     for (const car of this.vehicles) {
       const p = car.physics;
-      const isDrifting = p.isDrifting ||
-        (Math.abs(p.slipAngle) > 0.07 && Math.abs(p.speed) > 7) ||
-        (this.keys.handbrake && car === this.player && Math.abs(p.speed) > 4);
-      if (isDrifting && this.driftParticles) {
+      if (p.isAirborne || p.y > 0.05) continue; // No tire scrub while airborne
+
+      const surface = this.circuitTrack.getTrackSurfaceAt(p.x, p.z);
+      const isOffroad = surface.surface !== 'asphalt';
+      const isTurning = Math.abs(p.slipAngle) > 0.025 && Math.abs(p.speed) > 6;
+      const isHandbraking = this.keys.handbrake && car === this.player && Math.abs(p.speed) > 3;
+      const shouldEmit = p.isDrifting || isHandbraking || isTurning || (isOffroad && Math.abs(p.speed) > 6);
+
+      if (shouldEmit && this.driftParticles) {
         const fX = Math.cos(p.angle);
         const fZ = Math.sin(p.angle);
         const rX = -fZ;
@@ -402,8 +407,7 @@ export class Game {
         const vLateral = p.vx * rX + p.vz * rZ;
         const slipDir = vLateral >= 0 ? 1 : -1;
 
-        const surface = this.circuitTrack.getTrackSurfaceAt(p.x, p.z);
-        const count = surface.surface === 'grass' ? 3 : 2;
+        const count = isOffroad ? 3 : (p.isDrifting || isHandbraking ? 3 : 2);
 
         // Emit from rear tire positions
         const rearOffset = -1.4;
@@ -412,7 +416,7 @@ export class Game {
         // Left rear tire
         this.driftParticles.emit({
           x: p.x + fX * rearOffset + rX * halfTireTrack,
-          y: 0.15,
+          y: 0.22,
           z: p.z + fZ * rearOffset + rZ * halfTireTrack,
           headingAngle: p.angle,
           slipDirection: slipDir,
@@ -424,7 +428,7 @@ export class Game {
         // Right rear tire
         this.driftParticles.emit({
           x: p.x + fX * rearOffset - rX * halfTireTrack,
-          y: 0.15,
+          y: 0.22,
           z: p.z + fZ * rearOffset - rZ * halfTireTrack,
           headingAngle: p.angle,
           slipDirection: slipDir,

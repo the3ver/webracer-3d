@@ -98,7 +98,31 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     const isHandbraking = await page.evaluate(() => window.game.keys.handbrake);
     expect(isHandbraking).toBe(true);
 
+    // Verify active drift particles are emitted
+    await page.waitForFunction(() => window.game.driftParticles && window.game.driftParticles.getActiveCount() > 0, { timeout: 4000 });
+    const particleCount = await page.evaluate(() => window.game.driftParticles.getActiveCount());
+    expect(particleCount).toBeGreaterThan(0);
+
     await page.keyboard.up('Space');
+    await page.keyboard.up('KeyW');
+  });
+
+  test('Cornering in curves emits visible tire scrub particles', async ({ page }) => {
+    await page.click('#btn-start');
+    await page.waitForFunction(() => window.game && window.game.state === 'RACING', { timeout: 8000 });
+
+    // Accelerate and steer hard into turn
+    await page.keyboard.down('KeyW');
+    await page.waitForFunction(() => window.game.player.physics.speed > 25, { timeout: 8000 });
+    await page.keyboard.down('KeyA');
+    await page.waitForFunction(() => window.game.driftParticles && window.game.driftParticles.getActiveCount() > 0, { timeout: 5000 });
+
+    const particleCount = await page.evaluate(() => window.game.driftParticles.getActiveCount());
+    expect(particleCount).toBeGreaterThan(0);
+
+    await page.screenshot({ path: 'tests/screenshots/drift-particles-turn.png' });
+
+    await page.keyboard.up('KeyA');
     await page.keyboard.up('KeyW');
   });
 

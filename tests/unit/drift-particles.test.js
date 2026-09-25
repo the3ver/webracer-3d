@@ -70,4 +70,12 @@ describe('DriftParticles System', () => {
     }
     assert.ok(hasBrightSmoke, 'Asphalt drift should emit high-contrast white/light-grey smoke particles');
   });
+
+  it('disables frustum culling on InstancedMesh so particles are not culled when camera tracks away from origin', () => {
+    const scene = new THREE.Scene();
+    const particleSystem = new DriftParticles(scene, 100);
+
+    assert.equal(particleSystem.mesh.frustumCulled, false, 'InstancedMesh must have frustumCulled set to false');
+    assert.equal(particleSystem.mesh.material.vertexColors, false, 'Material should not use vertexColors without geometry vertex colors');
+  });
 });
