@@ -287,5 +287,29 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
 
     await page.waitForTimeout(500);
     await page.screenshot({ path: 'tests/screenshots/alpine-summit-tunnel.png' });
+
+    // Spot 1: Eastern approach curve (x=100, z=130) where mountain previously covered the track
+    await page.evaluate(() => {
+      window.game.player.physics.x = 100;
+      window.game.player.physics.z = 130;
+      window.game.player.physics.angle = Math.PI * 0.8;
+      window.game.player.mesh.position.set(100, 0, 130);
+      window.game.updateCamera(0.016);
+      window.game.renderer.render(window.game.scene, window.game.camera);
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'tests/screenshots/alpine-approach-curve.png' });
+
+    // Spot 2: Western descent & hairpin sweep (x=-130, z=25) where mountain previously covered the track
+    await page.evaluate(() => {
+      window.game.player.physics.x = -130;
+      window.game.player.physics.z = 25;
+      window.game.player.physics.angle = -Math.PI * 0.4;
+      window.game.player.mesh.position.set(-130, 0, 25);
+      window.game.updateCamera(0.016);
+      window.game.renderer.render(window.game.scene, window.game.camera);
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'tests/screenshots/alpine-western-sweep.png' });
   });
 });

@@ -53,32 +53,34 @@ export class CircuitMeshBuilder {
     groundMesh.receiveShadow = true;
     this.group.add(groundMesh);
 
-    // Decorative perimeter hills/mountain silhouettes around the valley
-    const hillMat = new THREE.MeshStandardMaterial({
-      color: 0x24422b,
-      roughness: 0.98,
-      metalness: 0.0
-    });
+    // Decorative perimeter hills/mountain silhouettes around the valley (Pine Valley only)
+    if (this.theme !== 'alpine-summit') {
+      const hillMat = new THREE.MeshStandardMaterial({
+        color: 0x24422b,
+        roughness: 0.98,
+        metalness: 0.0
+      });
 
-    const hillDefs = [
-      { x: -180, z: -150, r: 80, h: 32 },
-      { x: 0, z: -200, r: 90, h: 38 },
-      { x: 180, z: -160, r: 85, h: 35 },
-      { x: 300, z: 20, r: 85, h: 42 },
-      { x: 200, z: 180, r: 90, h: 36 },
-      { x: 30, z: 220, r: 80, h: 30 },
-      { x: -160, z: 180, r: 85, h: 34 },
-      { x: -220, z: 0, r: 90, h: 40 }
-    ];
+      const hillDefs = [
+        { x: -180, z: -150, r: 80, h: 32 },
+        { x: 0, z: -200, r: 90, h: 38 },
+        { x: 180, z: -160, r: 85, h: 35 },
+        { x: 300, z: 20, r: 85, h: 42 },
+        { x: 200, z: 180, r: 90, h: 36 },
+        { x: 30, z: 220, r: 80, h: 30 },
+        { x: -160, z: 180, r: 85, h: 34 },
+        { x: -220, z: 0, r: 90, h: 40 }
+      ];
 
-    hillDefs.forEach(h => {
-      const hillGeo = new THREE.ConeGeometry(h.r, h.h, 7);
-      const hill = new THREE.Mesh(hillGeo, hillMat);
-      hill.name = 'background_hill';
-      hill.position.set(h.x, h.h * 0.45 - 2, h.z);
-      hill.castShadow = false;
-      this.group.add(hill);
-    });
+      hillDefs.forEach(h => {
+        const hillGeo = new THREE.ConeGeometry(h.r, h.h, 7);
+        const hill = new THREE.Mesh(hillGeo, hillMat);
+        hill.name = 'background_hill';
+        hill.position.set(h.x, h.h * 0.45 - 2, h.z);
+        hill.castShadow = false;
+        this.group.add(hill);
+      });
+    }
   }
 
   buildTrackRibbon() {
@@ -909,21 +911,27 @@ export class CircuitMeshBuilder {
   }
 
   buildAlpineSummitProps() {
-    const snowMat = new THREE.MeshStandardMaterial({ color: 0xfafaff, roughness: 0.8 });
+    const snowMat = new THREE.MeshStandardMaterial({
+      color: 0xfafaff,
+      roughness: 0.8,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      polygonOffsetUnits: -1
+    });
     const cliffMat = new THREE.MeshStandardMaterial({ color: 0x474a51, roughness: 0.95 });
     const larchMat = new THREE.MeshStandardMaterial({ color: 0x2b4c30, roughness: 0.85 });
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 0.9 });
 
-    // Jagged snow-capped alpine peaks around the circuit
+    // Jagged snow-capped alpine peaks positioned with clear buffer clearance from the track
     const peaks = [
-      { x: -160, z: -120, r: 85, h: 48, snowH: 18 },
-      { x: 0, z: -180, r: 90, h: 54, snowH: 22 },
-      { x: 180, z: -110, r: 95, h: 52, snowH: 20 },
-      { x: 230, z: 80, r: 90, h: 50, snowH: 19 },
-      { x: 140, z: 190, r: 85, h: 46, snowH: 16 },
-      { x: -50, z: 200, r: 90, h: 50, snowH: 18 },
-      { x: -180, z: 140, r: 85, h: 45, snowH: 17 },
-      { x: -210, z: 0, r: 95, h: 55, snowH: 22 }
+      { x: -160, z: -120, r: 80, h: 48, snowH: 18 },
+      { x: 0, z: -190, r: 85, h: 54, snowH: 22 },
+      { x: 190, z: -110, r: 90, h: 52, snowH: 20 },
+      { x: 230, z: 80, r: 85, h: 50, snowH: 19 },
+      { x: 180, z: 230, r: 85, h: 46, snowH: 16 },
+      { x: -60, z: 240, r: 85, h: 50, snowH: 18 },
+      { x: -200, z: 160, r: 85, h: 45, snowH: 17 },
+      { x: -245, z: 10, r: 90, h: 55, snowH: 22 }
     ];
 
     peaks.forEach(p => {
@@ -936,10 +944,11 @@ export class CircuitMeshBuilder {
       baseMesh.position.y = p.h * 0.45;
       peakGroup.add(baseMesh);
 
-      // White snow-cap on the mountain top
+      // White snow-cap on the mountain top (slight scale offset + polygonOffset prevents z-fighting)
       const capGeo = new THREE.ConeGeometry(p.r * (p.snowH / p.h), p.snowH, 7);
       const capMesh = new THREE.Mesh(capGeo, snowMat);
       capMesh.position.y = p.h * 0.45 + (p.h - p.snowH) * 0.5;
+      capMesh.scale.set(1.025, 1.005, 1.025);
       peakGroup.add(capMesh);
 
       peakGroup.position.set(p.x, -2, p.z);

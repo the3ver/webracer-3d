@@ -1,5 +1,6 @@
 import test, { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import * as THREE from 'three';
 import { TRACK_PRESETS, getTrackPreset, TRACK_CONFIG } from '../../src/js/track/track-data.js';
 import { CircuitMeshBuilder } from '../../src/js/track/circuit-mesh.js';
 
@@ -78,5 +79,68 @@ describe('Track Presets & Alpine Summit Circuit', () => {
     }
 
     assert.equal(invertedTriangles, 0, `Expected zero inverted triangles in Alpine Summit track ribbon, found ${invertedTriangles}`);
+  });
+
+  it('ensures Alpine Summit mountain peaks maintain clearance from track and avoid z-fighting on snow-caps', () => {
+    const alpine = getTrackPreset('alpine-summit');
+    const builder = new CircuitMeshBuilder(alpine.waypoints, alpine.trackWidth, alpine.ramps, {
+      theme: 'alpine-summit',
+      tunnels: alpine.tunnels
+    });
+    const group = builder.build();
+
+    const curvePoints = alpine.waypoints.map(w => new THREE.Vector3(w.x, 0, w.z));
+    const curve = new THREE.CatmullRomCurve3(curvePoints, true, 'centripetal');
+    const trackPts = curve.getPoints(300);
+    const halfW = alpine.trackWidth * 0.5;
+
+    let backgroundHillsCount = 0;
+    const peaks = [];
+
+    group.traverse((child) => {
+      if (child.name === 'background_hill') {
+        backgroundHillsCount++;
+      }
+      if (child.name === 'alpine_peak') {
+        let baseMesh = null;
+        let capMesh = null;
+        child.traverse(c => {
+          if (c.isMesh && c.geometry instanceof THREE.ConeGeometry) {
+            if (!baseMesh) baseMesh = c;
+            else capMesh = c;
+          }
+        });
+        peaks.push({
+          x: child.position.x,
+          z: child.position.z,
+          radius: baseMesh ? baseMesh.geometry.parameters.radius : 0,
+          baseMesh,
+          capMesh
+        });
+      }
+    });
+
+    // Pine Valley background hills should not be added to Alpine Summit
+    assert.equal(backgroundHillsCount, 0, 'Alpine Summit should not contain Pine Valley background hills');
+    assert.ok(peaks.length > 0, 'Alpine Summit should contain alpine peaks');
+
+    // Every peak must be completely clear of the track
+    for (const p of peaks) {
+      let minDist = Infinity;
+      for (const pt of trackPts) {
+        const d = Math.hypot(p.x - pt.x, p.z - pt.z);
+        if (d < minDist) minDist = d;
+      }
+      assert.ok(
+        minDist >= p.radius + halfW,
+        `Peak at (${p.x}, ${p.z}) with radius ${p.radius} encroaches on track! MinDist: ${minDist.toFixed(1)}, required: ${(p.radius + halfW).toFixed(1)}`
+      );
+
+      // Verify snow-cap prevents z-fighting (has polygonOffset or radial scale offset)
+      if (p.capMesh && p.capMesh.material) {
+        const hasOffset = p.capMesh.material.polygonOffset === true || p.capMesh.scale.x > 1.01;
+        assert.ok(hasOffset, `Snow-cap on peak at (${p.x}, ${p.z}) must use polygonOffset or radial scale offset to eliminate z-fighting`);
+      }
+    }
   });
 });
