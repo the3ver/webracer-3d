@@ -374,13 +374,13 @@ export class Game {
         if (this.driftParticles) {
           this.driftParticles.emit({
             x: p.x,
-            y: 0.12,
+            y: 0.14,
             z: p.z,
             headingAngle: p.angle,
             slipDirection: 0,
-            speed: Math.abs(p.speed) + 12,
+            speed: Math.abs(p.speed) + 8,
             surface: 'asphalt',
-            count: 10
+            count: 5
           });
         }
       }
@@ -407,7 +407,8 @@ export class Game {
         const vLateral = p.vx * rX + p.vz * rZ;
         const slipDir = vLateral >= 0 ? 1 : -1;
 
-        const count = isOffroad ? 3 : (p.isDrifting || isHandbraking ? 3 : 2);
+        // Subtle counts: 1 per wheel in curves, 2 in hard drift / offroad
+        const count = isOffroad ? 2 : (p.isDrifting || isHandbraking ? 2 : 1);
 
         // Emit from rear tire positions
         const rearOffset = -1.4;
@@ -416,7 +417,7 @@ export class Game {
         // Left rear tire
         this.driftParticles.emit({
           x: p.x + fX * rearOffset + rX * halfTireTrack,
-          y: 0.22,
+          y: 0.14,
           z: p.z + fZ * rearOffset + rZ * halfTireTrack,
           headingAngle: p.angle,
           slipDirection: slipDir,
@@ -428,7 +429,7 @@ export class Game {
         // Right rear tire
         this.driftParticles.emit({
           x: p.x + fX * rearOffset - rX * halfTireTrack,
-          y: 0.22,
+          y: 0.14,
           z: p.z + fZ * rearOffset - rZ * halfTireTrack,
           headingAngle: p.angle,
           slipDirection: slipDir,

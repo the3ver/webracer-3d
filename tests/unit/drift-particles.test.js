@@ -52,9 +52,9 @@ describe('DriftParticles System', () => {
     const activeParticles = particleSystem.particles.filter(p => p.alive);
     assert.equal(activeParticles.length, 10);
 
-    // Particle scale should be generous and visible (>= 1.0)
+    // Particle scale should be well-proportioned and subtle (between 0.6 and 1.5)
     for (const p of activeParticles) {
-      assert.ok(p.scale >= 1.0, `Particle scale (${p.scale}) should be >= 1.0 for clear visibility`);
+      assert.ok(p.scale >= 0.6 && p.scale <= 1.5, `Particle scale (${p.scale}) should be subtle and well-proportioned`);
     }
 
     // Check that at least some particles have high-contrast bright smoke colors

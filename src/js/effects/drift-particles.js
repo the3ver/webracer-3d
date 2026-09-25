@@ -12,11 +12,13 @@ export class DriftParticles {
     this.particles = [];
     this.nextIndex = 0;
 
-    // Single draw-call instanced mesh for 3D tire smoke puffs, pebbles and debris
-    const geo = new THREE.BoxGeometry(0.55, 0.55, 0.55);
+    // Single draw-call instanced mesh for subtle arcade tire smoke puffs, pebbles and debris
+    const geo = new THREE.BoxGeometry(0.24, 0.24, 0.24);
     const mat = new THREE.MeshStandardMaterial({
       roughness: 0.85,
-      metalness: 0.1
+      metalness: 0.05,
+      transparent: true,
+      opacity: 0.72
     });
 
     this.mesh = new THREE.InstancedMesh(geo, mat, maxParticles);
@@ -99,27 +101,27 @@ export class DriftParticles {
       const p = this.particles[this.nextIndex];
       p.alive = true;
       p.life = 0;
-      p.maxLife = 0.55 + Math.random() * 0.45;
-      p.scale = (surface === 'grass' ? 1.6 : 1.35) + Math.random() * 0.55;
+      p.maxLife = 0.35 + Math.random() * 0.3;
+      p.scale = (surface === 'grass' ? 1.05 : 0.85) + Math.random() * 0.35;
 
-      p.x = x + (Math.random() - 0.5) * 0.4;
-      p.y = Math.max(0.25, y + Math.random() * 0.2);
-      p.z = z + (Math.random() - 0.5) * 0.4;
+      p.x = x + (Math.random() - 0.5) * 0.25;
+      p.y = Math.max(0.12, y + Math.random() * 0.1);
+      p.z = z + (Math.random() - 0.5) * 0.25;
 
       // Sprays backwards and outwards according to slip angle
-      const backwardSpeed = (speed * 0.35 + 3.5 + Math.random() * 6);
-      const sidewaysSpeed = (slipDirection * (5 + Math.random() * 8));
-      const upwardSpeed = (surface === 'grass' ? 6.0 : 4.2) + Math.random() * 4.0;
+      const backwardSpeed = (speed * 0.25 + 2.0 + Math.random() * 4.0);
+      const sidewaysSpeed = (slipDirection * (3.5 + Math.random() * 5.0));
+      const upwardSpeed = (surface === 'grass' ? 4.0 : 2.5) + Math.random() * 2.8;
 
-      p.vx = -fX * backwardSpeed + rX * sidewaysSpeed + (Math.random() - 0.5) * 2.5;
+      p.vx = -fX * backwardSpeed + rX * sidewaysSpeed + (Math.random() - 0.5) * 1.8;
       p.vy = upwardSpeed;
-      p.vz = -fZ * backwardSpeed + rZ * sidewaysSpeed + (Math.random() - 0.5) * 2.5;
+      p.vz = -fZ * backwardSpeed + rZ * sidewaysSpeed + (Math.random() - 0.5) * 1.8;
 
       p.rotX = Math.random() * Math.PI * 2;
       p.rotY = Math.random() * Math.PI * 2;
       p.rotZ = Math.random() * Math.PI * 2;
-      p.rotSpeedX = (Math.random() - 0.5) * 14;
-      p.rotSpeedY = (Math.random() - 0.5) * 14;
+      p.rotSpeedX = (Math.random() - 0.5) * 12;
+      p.rotSpeedY = (Math.random() - 0.5) * 12;
 
       const chosenColor = colors[Math.floor(Math.random() * colors.length)];
       this.mesh.setColorAt(this.nextIndex, new THREE.Color(chosenColor));
@@ -133,7 +135,7 @@ export class DriftParticles {
   }
 
   update(dt) {
-    const gravity = 18.0;
+    const gravity = 16.0;
     let needsMatrixUpdate = false;
 
     for (let i = 0; i < this.maxParticles; i++) {
@@ -158,19 +160,19 @@ export class DriftParticles {
       p.z += p.vz * dt;
 
       // Keep particles visibly resting or bouncing on top of the track/grass plane
-      if (p.y < 0.22) {
-        p.y = 0.22;
-        p.vy = -p.vy * 0.35; // bounce
-        p.vx *= 0.7;
-        p.vz *= 0.7;
+      if (p.y < 0.12) {
+        p.y = 0.12;
+        p.vy = -p.vy * 0.3; // bounce
+        p.vx *= 0.65;
+        p.vz *= 0.65;
       }
 
       p.rotX += p.rotSpeedX * dt;
       p.rotY += p.rotSpeedY * dt;
 
       const progress = p.life / p.maxLife;
-      const expand = 1.0 + progress * 0.75; // Smoke billows and expands outwards
-      const currentScale = Math.max(0.2, p.scale * expand * (1.0 - progress * 0.45));
+      const expand = 1.0 + progress * 0.45; // Smoke puffs billow slightly
+      const currentScale = Math.max(0.05, p.scale * expand * (1.0 - progress * 0.65));
 
       this.dummy.position.set(p.x, p.y, p.z);
       this.dummy.rotation.set(p.rotX, p.rotY, p.rotZ);

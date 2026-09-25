@@ -1,6 +1,6 @@
 {
   "name": "webracer-3d",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "description": "Pine Valley Raceway - 3D Isometric Arcade Circuit Racer with Three.js and Custom 2.5D Physics",
   "type": "module",
   "scripts": {

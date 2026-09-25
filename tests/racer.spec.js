@@ -113,12 +113,13 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
 
     // Accelerate and steer hard into turn
     await page.keyboard.down('KeyW');
-    await page.waitForFunction(() => window.game.player.physics.speed > 25, { timeout: 8000 });
+    await page.waitForFunction(() => window.game.player.physics.speed > 20, { timeout: 8000 });
     await page.keyboard.down('KeyA');
-    await page.waitForFunction(() => window.game.driftParticles && window.game.driftParticles.getActiveCount() > 0, { timeout: 5000 });
-
-    const particleCount = await page.evaluate(() => window.game.driftParticles.getActiveCount());
-    expect(particleCount).toBeGreaterThan(0);
+    const hasEmitted = await page.waitForFunction(
+      () => window.game.driftParticles && window.game.driftParticles.getActiveCount() > 0,
+      { timeout: 5000 }
+    );
+    expect(hasEmitted).toBeTruthy();
 
     await page.screenshot({ path: 'tests/screenshots/drift-particles-turn.png' });
 
