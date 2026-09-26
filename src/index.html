@@ -60,37 +60,99 @@
         <h1 class="circuit-title" id="circuit-title">PINE VALLEY</h1>
         <h2 class="sub-title" id="circuit-subtitle">// GRAND PRIX CIRCUIT //</h2>
         
-        <!-- Track Selector -->
+        <!-- Track Selector (5 Diverse Circuits) -->
         <div class="track-selector">
           <span class="selector-label">STRECKE WÄHLEN:</span>
-          <div class="track-btn-group">
-            <button id="btn-track-pine" class="track-select-btn active" data-track="pine-valley">
-              🌲 Pine Valley (Sprungschanze)
+          <div class="track-btn-group" id="track-btn-group">
+            <button id="btn-track-pine" class="track-select-btn active" data-track="pine-valley" title="Sprungschanze">
+              🌲 Pine Valley
             </button>
-            <button id="btn-track-alpine" class="track-select-btn" data-track="alpine-summit">
-              🏔️ Alpine Summit (Tunnel)
+            <button id="btn-track-alpine" class="track-select-btn" data-track="alpine-summit" title="Bergpass & Tunnel">
+              🏔️ Alpine Summit
+            </button>
+            <button id="btn-track-canyon" class="track-select-btn" data-track="canyon-chasm" title="Schlucht-Sprung & Felsentor">
+              🏜️ Red Rock
+            </button>
+            <button id="btn-track-velodrome" class="track-select-btn" data-track="neon-velodrome" title="Cyber-Steilkurve">
+              ⚡ Neon Speedway
+            </button>
+            <button id="btn-track-desert" class="track-select-btn" data-track="desert-dunes" title="Dünen & Treibsand">
+              🐪 Sahara Mirage
             </button>
           </div>
         </div>
 
-        <!-- Bot Count Selector -->
-        <div class="track-selector">
-          <span class="selector-label">ANZAHL GEGNER (BOTS):</span>
-          <div class="config-btn-group" id="bot-count-group">
-            <button class="config-select-btn" data-bots="1" id="btn-bots-1">1 Bot</button>
-            <button class="config-select-btn" data-bots="2" id="btn-bots-2">2 Bots</button>
-            <button class="config-select-btn active" data-bots="3" id="btn-bots-3">3 Bots</button>
-            <button class="config-select-btn" data-bots="5" id="btn-bots-5">5 Bots</button>
+        <!-- Track Best Time / Leaderboard Preview Widget -->
+        <div class="track-best-widget" id="track-best-widget">
+          <div class="best-item">
+            <span class="best-label">⏱️ RUNDENREKORD</span>
+            <span class="best-val" id="best-lap-display">--:--.--</span>
+          </div>
+          <div class="best-item">
+            <span class="best-label">🏆 BESTZEIT (3 RUNDEN)</span>
+            <span class="best-val" id="best-race-display">--:--.--</span>
           </div>
         </div>
 
-        <!-- Bot Difficulty Selector -->
+        <!-- Vehicle Selector (5 Unique Classes) -->
         <div class="track-selector">
-          <span class="selector-label">BOT-STÄRKE:</span>
-          <div class="config-btn-group" id="difficulty-group">
-            <button class="config-select-btn" data-difficulty="beginner" id="btn-diff-beginner">Anfänger</button>
-            <button class="config-select-btn active" data-difficulty="medium" id="btn-diff-medium">Mittelmaß</button>
-            <button class="config-select-btn" data-difficulty="pro" id="btn-diff-pro">Profi</button>
+          <span class="selector-label">FAHRZEUG WÄHLEN:</span>
+          <div class="config-btn-group" id="car-select-group">
+            <button class="config-select-btn active" data-car="red-fire" id="btn-car-red">🏎️ Red Fire</button>
+            <button class="config-select-btn" data-car="thunder-muscle" id="btn-car-muscle">🚀 Muscle</button>
+            <button class="config-select-btn" data-car="apex-formula" id="btn-car-formula">⚡ Speedster</button>
+            <button class="config-select-btn" data-car="mud-raider" id="btn-car-buggy">🚙 4x4 Buggy</button>
+            <button class="config-select-btn" data-car="drift-king" id="btn-car-drift">🔰 Drift King</button>
+          </div>
+          <!-- Vehicle Live Stats & Trait Card -->
+          <div class="car-stats-card" id="car-stats-card">
+            <div class="car-stats-header">
+              <span class="car-stats-title" id="car-stats-title">Red Fire</span>
+              <span class="car-stats-cat" id="car-stats-cat">Sport / Ausgewogen</span>
+            </div>
+            <div class="car-stats-desc" id="car-stats-desc">
+              Klassischer Sportcoupé-Allrounder mit harmonischer Balance aus Tempo, Kurvenpräzision und Driftkontrolle.
+            </div>
+            <div class="car-stats-bars">
+              <div class="stat-bar-row">
+                <span>TEMPO</span>
+                <div class="bar-outer"><div class="bar-fill" id="stat-speed" style="width: 75%"></div></div>
+              </div>
+              <div class="stat-bar-row">
+                <span>BESCHLEUNIGUNG</span>
+                <div class="bar-outer"><div class="bar-fill" id="stat-accel" style="width: 70%"></div></div>
+              </div>
+              <div class="stat-bar-row">
+                <span>HANDLING</span>
+                <div class="bar-outer"><div class="bar-fill" id="stat-handling" style="width: 72%"></div></div>
+              </div>
+              <div class="stat-bar-row">
+                <span>DRIFT-GRIP</span>
+                <div class="bar-outer"><div class="bar-fill" id="stat-drift" style="width: 70%"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bot Count & Difficulty Configuration -->
+        <div class="config-row-flex">
+          <div class="track-selector half">
+            <span class="selector-label">BOT-ANZAHL:</span>
+            <div class="config-btn-group" id="bot-count-group">
+              <button class="config-select-btn" data-bots="1" id="btn-bots-1">1</button>
+              <button class="config-select-btn" data-bots="2" id="btn-bots-2">2</button>
+              <button class="config-select-btn active" data-bots="3" id="btn-bots-3">3</button>
+              <button class="config-select-btn" data-bots="5" id="btn-bots-5">5</button>
+            </div>
+          </div>
+
+          <div class="track-selector half">
+            <span class="selector-label">BOT-STÄRKE:</span>
+            <div class="config-btn-group" id="difficulty-group">
+              <button class="config-select-btn" data-difficulty="beginner" id="btn-diff-beginner">Anfänger</button>
+              <button class="config-select-btn active" data-difficulty="medium" id="btn-diff-medium">Mittel</button>
+              <button class="config-select-btn" data-difficulty="pro" id="btn-diff-pro">Profi</button>
+            </div>
           </div>
         </div>
         
@@ -113,8 +175,10 @@
     <div id="finish-modal" class="modal-overlay hidden">
       <div class="podium-panel">
         <h2 class="podium-title">🏁 RENN-ERGEBNIS</h2>
+        <div id="finish-record-badge" class="finish-record-badge hidden">🏆 NEUER REKORD!</div>
         <div class="settings-divider"></div>
         <div id="podium-list" class="podium-list"></div>
+        <div id="finish-best-times" class="finish-best-times"></div>
         <div class="settings-footer">
           <button id="btn-restart" class="circuit-btn">NOCHMAL STARTEN</button>
         </div>

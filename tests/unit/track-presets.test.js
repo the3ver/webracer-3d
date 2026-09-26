@@ -143,4 +143,69 @@ describe('Track Presets & Alpine Summit Circuit', () => {
       }
     }
   });
+
+  it('defines 3 additional diverse circuit presets with special obstacles', () => {
+    const canyon = getTrackPreset('canyon-chasm');
+    assert.ok(canyon, 'Canyon Chasm preset should exist');
+    assert.match(canyon.name, /Canyon/);
+    assert.ok(canyon.ramps && canyon.ramps.length > 0, 'Canyon Chasm should feature canyon jump ramp');
+    assert.ok(canyon.chasmRavine, 'Canyon Chasm should define chasm ravine obstacle');
+
+    const velodrome = getTrackPreset('neon-velodrome');
+    assert.ok(velodrome, 'Neon Velodrome preset should exist');
+    assert.match(velodrome.name, /Neon|Velodrome/);
+    assert.ok(velodrome.bankedCurves && velodrome.bankedCurves.length > 0, 'Neon Velodrome should feature banked curve');
+
+    const desert = getTrackPreset('desert-dunes');
+    assert.ok(desert, 'Desert Dunes preset should exist');
+    assert.match(desert.name, /Mirage|Desert/);
+    assert.ok(desert.quicksandHazards && desert.quicksandHazards.length > 0, 'Desert Dunes should feature quicksand hazards');
+  });
+
+  it('builds unique 3D thematic decor and special obstacles for all new circuits', () => {
+    // 1. Canyon Chasm 3D mesh
+    const canyon = getTrackPreset('canyon-chasm');
+    const canyonBuilder = new CircuitMeshBuilder(canyon.waypoints, canyon.trackWidth, canyon.ramps, {
+      theme: 'canyon-chasm',
+      chasmRavine: canyon.chasmRavine
+    });
+    const canyonMesh = canyonBuilder.build();
+    let hasCanyonRock = false;
+    canyonMesh.traverse(c => {
+      if (c.name && (c.name.includes('canyon') || c.name.includes('mesa') || c.name.includes('chasm') || c.name.includes('spire'))) {
+        hasCanyonRock = true;
+      }
+    });
+    assert.ok(hasCanyonRock, 'Canyon mesh should generate canyon rock spires and chasm ravine');
+
+    // 2. Neon Velodrome 3D mesh
+    const velodrome = getTrackPreset('neon-velodrome');
+    const veloBuilder = new CircuitMeshBuilder(velodrome.waypoints, velodrome.trackWidth, velodrome.ramps, {
+      theme: 'neon-velodrome',
+      bankedCurves: velodrome.bankedCurves
+    });
+    const veloMesh = veloBuilder.build();
+    let hasNeonDecor = false;
+    veloMesh.traverse(c => {
+      if (c.name && (c.name.includes('neon') || c.name.includes('banked') || c.name.includes('light_strip'))) {
+        hasNeonDecor = true;
+      }
+    });
+    assert.ok(hasNeonDecor, 'Neon velodrome mesh should generate neon light strips and banked curve decor');
+
+    // 3. Desert Dunes 3D mesh
+    const desert = getTrackPreset('desert-dunes');
+    const desertBuilder = new CircuitMeshBuilder(desert.waypoints, desert.trackWidth, desert.ramps, {
+      theme: 'desert-dunes',
+      quicksandHazards: desert.quicksandHazards
+    });
+    const desertMesh = desertBuilder.build();
+    let hasDuneDecor = false;
+    desertMesh.traverse(c => {
+      if (c.name && (c.name.includes('dune') || c.name.includes('quicksand') || c.name.includes('palm') || c.name.includes('oasis'))) {
+        hasDuneDecor = true;
+      }
+    });
+    assert.ok(hasDuneDecor, 'Desert dunes mesh should generate sand dunes, quicksand patches, and oasis decor');
+  });
 });

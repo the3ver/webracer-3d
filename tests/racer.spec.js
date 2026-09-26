@@ -342,5 +342,60 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     expect(await page.evaluate(() => window.game.botDifficulty)).toBe('beginner');
     expect(await page.evaluate(() => window.game.aiDrivers[0].profile.id)).toBe('beginner');
   });
+
+  test('Vehicle selection switches car types and updates telemetry attributes', async ({ page }) => {
+    // Default vehicle is red-fire
+    expect(await page.evaluate(() => window.game.selectedCarTypeId)).toBe('red-fire');
+    expect(await page.evaluate(() => window.game.player.carType.id)).toBe('red-fire');
+
+    // Switch to Thunder Muscle
+    await page.click('button[data-car="thunder-muscle"]');
+    expect(await page.evaluate(() => window.game.selectedCarTypeId)).toBe('thunder-muscle');
+    expect(await page.evaluate(() => window.game.player.carType.id)).toBe('thunder-muscle');
+    expect(await page.evaluate(() => window.game.player.physics.maxSpeed)).toBe(54);
+    await expect(page.locator('#car-stats-title')).toHaveText('Thunder Muscle');
+
+    // Switch to Apex Formula
+    await page.click('button[data-car="apex-formula"]');
+    expect(await page.evaluate(() => window.game.selectedCarTypeId)).toBe('apex-formula');
+    expect(await page.evaluate(() => window.game.player.physics.steerSpeed)).toBe(3.4);
+
+    // Switch to Mud Raider
+    await page.click('button[data-car="mud-raider"]');
+    expect(await page.evaluate(() => window.game.selectedCarTypeId)).toBe('mud-raider');
+    expect(await page.evaluate(() => window.game.player.physics.offroadResist)).toBe(0.85);
+
+    // Switch to Drift King
+    await page.click('button[data-car="drift-king"]');
+    expect(await page.evaluate(() => window.game.selectedCarTypeId)).toBe('drift-king');
+    expect(await page.evaluate(() => window.game.player.physics.driftGrip)).toBe(1.5);
+  });
+
+  test('Circuit switching updates 3D scene, track HUD and leaderboard records across all 5 tracks', async ({ page }) => {
+    const tracks = ['pine-valley', 'alpine-summit', 'canyon-chasm', 'neon-velodrome', 'desert-dunes'];
+    for (const trackId of tracks) {
+      await page.click(`button[data-track="${trackId}"]`);
+      expect(await page.evaluate(() => window.game.currentTrackId)).toBe(trackId);
+      const activeBtn = page.locator(`button[data-track="${trackId}"]`);
+      await expect(activeBtn).toHaveClass(/active/);
+      await expect(page.locator('#track-best-widget')).toBeVisible();
+    }
+
+    // Submit a mock record to leaderboard and verify UI update
+    await page.evaluate(() => {
+      window.game.leaderboard.submitRecord('canyon-chasm', {
+        lapTime: 28.45,
+        raceTime: 87.20,
+        carName: 'Apex Formula'
+      });
+      window.game.updateLeaderboardUI();
+    });
+
+    await page.click('button[data-track="canyon-chasm"]');
+    await expect(page.locator('#best-lap-display')).toContainText('00:28.45');
+    await expect(page.locator('#best-lap-display')).toContainText('Apex Formula');
+    await expect(page.locator('#best-race-display')).toContainText('01:27.20');
+  });
 });
+
 

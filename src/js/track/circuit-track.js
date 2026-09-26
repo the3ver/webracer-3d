@@ -8,6 +8,7 @@ export class CircuitTrack {
     this.trackWidth = options.trackWidth || 16;
     this.totalLaps = options.totalLaps || 3;
     this.ramps = options.ramps || [];
+    this.quicksandHazards = options.quicksandHazards || [];
     this.segments = [];
     this.totalLength = 0;
 
@@ -116,6 +117,21 @@ export class CircuitTrack {
    * @returns {{ surface: 'asphalt'|'curb'|'grass', friction: number, maxSpeedMultiplier: number, grip: number }}
    */
   getTrackSurfaceAt(x, z) {
+    if (this.quicksandHazards && this.quicksandHazards.length > 0) {
+      for (let i = 0; i < this.quicksandHazards.length; i++) {
+        const h = this.quicksandHazards[i];
+        const dist = Math.hypot(x - h.x, z - h.z);
+        if (dist <= h.radius) {
+          return {
+            surface: 'quicksand',
+            friction: h.dragFactor || 0.35,
+            maxSpeedMultiplier: 0.38,
+            grip: 0.4
+          };
+        }
+      }
+    }
+
     let minDistance = Infinity;
 
     for (let i = 0; i < this.segments.length; i++) {

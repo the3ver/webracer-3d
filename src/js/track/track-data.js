@@ -57,6 +57,76 @@ export const ALPINE_SUMMIT_WAYPOINTS = [
   { x: -75, z: 0 }
 ];
 
+export const CANYON_CHASM_WAYPOINTS = [
+  // Canyon Floor Straight (heading +X)
+  { x: -40, z: -40 },
+  { x: 0, z: -40 },
+  { x: 45, z: -40 },
+
+  // Sandstone Ridge Sweeper
+  { x: 90, z: -25 },
+  { x: 120, z: 15 },
+  { x: 110, z: 65 },
+
+  // Approach to the Deep Chasm Ravine (Jump over the Gorge)
+  { x: 80, z: 90 },
+  { x: 40, z: 95 },
+  { x: 0, z: 95 },
+
+  // Western Mesa Switchback
+  { x: -45, z: 80 },
+  { x: -85, z: 50 },
+  { x: -105, z: 10 },
+  { x: -85, z: -25 }
+];
+
+export const NEON_VELODROME_WAYPOINTS = [
+  // High-Speed Straight (heading +X)
+  { x: -40, z: -50 },
+  { x: 0, z: -50 },
+  { x: 45, z: -50 },
+
+  // East Super-Banked Oval Curve
+  { x: 95, z: -35 },
+  { x: 130, z: 0 },
+  { x: 125, z: 45 },
+  { x: 85, z: 75 },
+
+  // Infield Chicane
+  { x: 40, z: 60 },
+  { x: 0, z: 40 },
+  { x: -40, z: 65 },
+
+  // West Super-Banked Oval Curve
+  { x: -85, z: 75 },
+  { x: -125, z: 35 },
+  { x: -120, z: -15 },
+  { x: -85, z: -45 }
+];
+
+export const DESERT_DUNES_WAYPOINTS = [
+  // Sahara Main Straight (heading +X)
+  { x: -40, z: -20 },
+  { x: 10, z: -20 },
+  { x: 60, z: -15 },
+
+  // Dune Ridge Slalom
+  { x: 105, z: 10 },
+  { x: 130, z: 50 },
+  { x: 100, z: 85 },
+  { x: 55, z: 75 },
+
+  // Oasis Lake Hairpin (surrounded by quicksand hazard zones)
+  { x: 20, z: 90 },
+  { x: -25, z: 105 },
+  { x: -65, z: 85 },
+
+  // Dune Valley Straight
+  { x: -90, z: 45 },
+  { x: -105, z: 5 },
+  { x: -80, z: -20 }
+];
+
 export const TRACK_PRESETS = {
   'pine-valley': {
     id: 'pine-valley',
@@ -116,6 +186,94 @@ export const TRACK_PRESETS = {
         height: 6.5
       }
     ]
+  },
+  'canyon-chasm': {
+    id: 'canyon-chasm',
+    name: 'Red Rock Canyon',
+    theme: 'canyon-chasm',
+    trackWidth: 16,
+    totalLaps: 3,
+    playerStart: { x: -40, z: -40, angle: 0 },
+    gridSpots: [
+      { x: -40, z: -44, angle: 0, color: 0xe63946, name: 'Player (Red Fire)' },
+      { x: -40, z: -36, angle: 0, color: 0x4361ee, name: 'Rival Blue (Apex)' },
+      { x: -55, z: -44, angle: 0, color: 0xfb8500, name: 'Rival Orange (Viper)' },
+      { x: -55, z: -36, angle: 0, color: 0x2ec4b6, name: 'Rival Teal (Specter)' },
+      { x: -70, z: -44, angle: 0, color: 0xffd166, name: 'Rival Gold (Comet)' },
+      { x: -70, z: -36, angle: 0, color: 0x06d6a0, name: 'Rival Mint (Phantom)' }
+    ],
+    waypoints: CANYON_CHASM_WAYPOINTS,
+    ramps: [
+      {
+        id: 'canyon_chasm_jump',
+        name: 'Ravine Gap Jump',
+        x: 40,
+        z: 95,
+        width: 14.0,
+        length: 9.0,
+        height: 2.6,
+        liftVelocity: 16.0,
+        angle: Math.PI // heading west across ravine
+      }
+    ],
+    chasmRavine: {
+      x: 20,
+      z: 95,
+      width: 40,
+      depth: 30
+    },
+    tunnels: []
+  },
+  'neon-velodrome': {
+    id: 'neon-velodrome',
+    name: 'Neon Velodrome Speedway',
+    theme: 'neon-velodrome',
+    trackWidth: 16,
+    totalLaps: 3,
+    playerStart: { x: -40, z: -50, angle: 0 },
+    gridSpots: [
+      { x: -40, z: -54, angle: 0, color: 0xe63946, name: 'Player (Red Fire)' },
+      { x: -40, z: -46, angle: 0, color: 0x4361ee, name: 'Rival Blue (Apex)' },
+      { x: -55, z: -54, angle: 0, color: 0xfb8500, name: 'Rival Orange (Viper)' },
+      { x: -55, z: -46, angle: 0, color: 0x2ec4b6, name: 'Rival Teal (Specter)' },
+      { x: -70, z: -54, angle: 0, color: 0xffd166, name: 'Rival Gold (Comet)' },
+      { x: -70, z: -46, angle: 0, color: 0x06d6a0, name: 'Rival Mint (Phantom)' }
+    ],
+    waypoints: NEON_VELODROME_WAYPOINTS,
+    ramps: [],
+    bankedCurves: [
+      {
+        id: 'east_banked_sweeper',
+        name: 'East Super-Banked Oval Curve',
+        center: { x: 120, z: 20 },
+        radius: 45,
+        bankAngle: 0.18
+      }
+    ],
+    tunnels: []
+  },
+  'desert-dunes': {
+    id: 'desert-dunes',
+    name: 'Sahara Mirage Raceway',
+    theme: 'desert-dunes',
+    trackWidth: 16,
+    totalLaps: 3,
+    playerStart: { x: -40, z: -20, angle: 0 },
+    gridSpots: [
+      { x: -40, z: -24, angle: 0, color: 0xe63946, name: 'Player (Red Fire)' },
+      { x: -40, z: -16, angle: 0, color: 0x4361ee, name: 'Rival Blue (Apex)' },
+      { x: -55, z: -24, angle: 0, color: 0xfb8500, name: 'Rival Orange (Viper)' },
+      { x: -55, z: -16, angle: 0, color: 0x2ec4b6, name: 'Rival Teal (Specter)' },
+      { x: -70, z: -24, angle: 0, color: 0xffd166, name: 'Rival Gold (Comet)' },
+      { x: -70, z: -16, angle: 0, color: 0x06d6a0, name: 'Rival Mint (Phantom)' }
+    ],
+    waypoints: DESERT_DUNES_WAYPOINTS,
+    ramps: [],
+    quicksandHazards: [
+      { id: 'oasis_quicksand_trap', x: 20, z: 90, radius: 12, dragFactor: 0.35 },
+      { id: 'dune_drift_trap', x: -45, z: 95, radius: 11, dragFactor: 0.40 }
+    ],
+    tunnels: []
   }
 };
 

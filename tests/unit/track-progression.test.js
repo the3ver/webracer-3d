@@ -70,4 +70,25 @@ describe('CircuitTrack Progression & Laps', () => {
     assert.equal(standings[0].id, 'racer1', 'Racer 1 should be P1 because of lap lead');
     assert.equal(standings[1].id, 'racer2', 'Racer 2 should be P2');
   });
+
+  it('detects quicksand hazard patches and returns quicksand surface with high drag', () => {
+    const waypoints = [
+      { x: 0, z: 0 },
+      { x: 100, z: 0 },
+      { x: 100, z: 100 },
+      { x: 0, z: 100 }
+    ];
+    const quicksandHazards = [
+      { id: 'oasis_quicksand_trap', x: 20, z: 90, radius: 12, dragFactor: 0.35 }
+    ];
+    const track = new CircuitTrack({ waypoints, trackWidth: 16, quicksandHazards });
+    const surfaceInTrap = track.getTrackSurfaceAt(22, 89);
+    assert.equal(surfaceInTrap.surface, 'quicksand');
+    assert.equal(surfaceInTrap.friction, 0.35);
+    assert.ok(surfaceInTrap.maxSpeedMultiplier <= 0.4);
+
+    const surfaceOutside = track.getTrackSurfaceAt(50, 50);
+    assert.notEqual(surfaceOutside.surface, 'quicksand');
+  });
 });
+

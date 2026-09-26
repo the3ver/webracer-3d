@@ -1,6 +1,6 @@
 import { Game } from './game.js';
 
-window.addEventListener('DOMContentLoaded', () => {
+function init() {
   const game = new Game();
   window.game = game;
 
@@ -87,4 +87,11 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   requestAnimationFrame(animate);
-});
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+

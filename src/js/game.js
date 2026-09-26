@@ -3,9 +3,11 @@ import { TRACK_WAYPOINTS, TRACK_CONFIG, TRACK_PRESETS, getTrackPreset, getGridSp
 import { CircuitTrack } from './track/circuit-track.js';
 import { CircuitMeshBuilder } from './track/circuit-mesh.js';
 import { IsometricCar } from './vehicles/isometric-car.js';
+import { CAR_TYPES, getCarTypeConfig } from './vehicles/car-types.js';
 import { RacerAI, getBotCarConfig, resolveDifficultyProfile } from './ai/racer-ai.js';
 import { EngineAudio } from './audio/engine-audio.js';
 import { DriftParticles } from './effects/drift-particles.js';
+import { Leaderboard } from './storage/leaderboard.js';
 
 export class Game {
   constructor() {
@@ -16,6 +18,10 @@ export class Game {
     this.totalLaps = this.currentTrackConfig.totalLaps || 3;
     this.botCount = 3;
     this.botDifficulty = 'medium'; // 'beginner' | 'medium' | 'pro'
+    this.selectedCarTypeId = 'red-fire';
+    this.selectedCarType = getCarTypeConfig(this.selectedCarTypeId);
+    this.leaderboard = new Leaderboard();
+
     this.countdownTimer = 3.99;
     this.isPaused = false;
     this.isSettingsOpen = false;
@@ -49,7 +55,9 @@ export class Game {
     this.trackers = [];
     this.setupTrackAndVehicles();
     this.setupTrackSelectorUI();
+    this.setupCarSelectorUI();
     this.setupConfigSelectorsUI();
+    this.updateLeaderboardUI();
 
     // Input state
     this.keys = {
@@ -129,12 +137,16 @@ export class Game {
       waypoints: cfg.waypoints,
       trackWidth: cfg.trackWidth,
       totalLaps: this.totalLaps,
-      ramps: cfg.ramps
+      ramps: cfg.ramps,
+      quicksandHazards: cfg.quicksandHazards
     });
 
     const meshBuilder = new CircuitMeshBuilder(cfg.waypoints, cfg.trackWidth, cfg.ramps, {
       theme: cfg.theme,
-      tunnels: cfg.tunnels
+      tunnels: cfg.tunnels,
+      chasmRavine: cfg.chasmRavine,
+      bankedCurves: cfg.bankedCurves,
+      quicksandHazards: cfg.quicksandHazards
     });
     this.trackMeshGroup = meshBuilder.build();
     this.scene.add(this.trackMeshGroup);
@@ -155,36 +167,114 @@ export class Game {
     this.currentTrackConfig = getTrackPreset(trackId);
     this.setupTrackAndVehicles();
     this.updateTrackSelectorUI();
+    this.updateLeaderboardUI();
   }
 
   setupTrackSelectorUI() {
-    const btnPine = document.getElementById('btn-track-pine');
-    const btnAlpine = document.getElementById('btn-track-alpine');
-    if (btnPine) {
-      btnPine.addEventListener('click', () => this.loadTrack('pine-valley'));
-    }
-    if (btnAlpine) {
-      btnAlpine.addEventListener('click', () => this.loadTrack('alpine-summit'));
-    }
+    const trackBtns = document.querySelectorAll('#track-btn-group [data-track]');
+    trackBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-track');
+        this.loadTrack(id);
+      });
+    });
     this.updateTrackSelectorUI();
   }
 
   updateTrackSelectorUI() {
-    const btnPine = document.getElementById('btn-track-pine');
-    const btnAlpine = document.getElementById('btn-track-alpine');
+    const trackBtns = document.querySelectorAll('#track-btn-group [data-track]');
+    trackBtns.forEach(btn => {
+      const id = btn.getAttribute('data-track');
+      btn.classList.toggle('active', id === this.currentTrackId);
+    });
+
     const titleEl = document.getElementById('circuit-title');
     const subTitleEl = document.getElementById('circuit-subtitle');
 
-    if (btnPine) btnPine.classList.toggle('active', this.currentTrackId === 'pine-valley');
-    if (btnAlpine) btnAlpine.classList.toggle('active', this.currentTrackId === 'alpine-summit');
+    const trackTitles = {
+      'pine-valley': 'PINE VALLEY',
+      'alpine-summit': 'ALPINE SUMMIT',
+      'canyon-chasm': 'RED ROCK CANYON',
+      'neon-velodrome': 'NEON VELODROME',
+      'desert-dunes': 'SAHARA MIRAGE'
+    };
+
+    const trackSubtitles = {
+      'pine-valley': '// GRAND PRIX CIRCUIT & SCHANZE //',
+      'alpine-summit': '// HIGH MOUNTAIN PASS & ROCK TUNNEL //',
+      'canyon-chasm': '// CANYON GORGE & RAVINE GAP JUMP //',
+      'neon-velodrome': '// CYBER SPEEDWAY & HIGH-BANKED CURVE //',
+      'desert-dunes': '// DUNES, OASIS CHICANE & QUICKSAND //'
+    };
 
     if (titleEl) {
-      titleEl.innerText = this.currentTrackId === 'alpine-summit' ? 'ALPINE SUMMIT' : 'PINE VALLEY';
+      titleEl.innerText = trackTitles[this.currentTrackId] || 'PINE VALLEY';
     }
     if (subTitleEl) {
-      subTitleEl.innerText = this.currentTrackId === 'alpine-summit'
-        ? '// HIGH MOUNTAIN PASS & ROCK TUNNEL //'
-        : '// GRAND PRIX CIRCUIT //';
+      subTitleEl.innerText = trackSubtitles[this.currentTrackId] || '// GRAND PRIX CIRCUIT //';
+    }
+  }
+
+  setCarType(typeId) {
+    if (!CAR_TYPES[typeId]) return;
+    this.selectedCarTypeId = typeId;
+    this.selectedCarType = getCarTypeConfig(typeId);
+    this.setupGrid();
+    this.updateCarSelectorUI();
+  }
+
+  setupCarSelectorUI() {
+    const carBtns = document.querySelectorAll('#car-select-group [data-car]');
+    carBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-car');
+        this.setCarType(id);
+      });
+    });
+    this.updateCarSelectorUI();
+  }
+
+  updateCarSelectorUI() {
+    const carBtns = document.querySelectorAll('#car-select-group [data-car]');
+    carBtns.forEach(btn => {
+      const id = btn.getAttribute('data-car');
+      btn.classList.toggle('active', id === this.selectedCarTypeId);
+    });
+
+    const titleEl = document.getElementById('car-stats-title');
+    const catEl = document.getElementById('car-stats-cat');
+    const descEl = document.getElementById('car-stats-desc');
+    const speedBar = document.getElementById('stat-speed');
+    const accelBar = document.getElementById('stat-accel');
+    const handlingBar = document.getElementById('stat-handling');
+    const driftBar = document.getElementById('stat-drift');
+
+    const cfg = this.selectedCarType;
+    if (titleEl) titleEl.innerText = cfg.name;
+    if (catEl) catEl.innerText = cfg.category;
+    if (descEl) descEl.innerText = cfg.description;
+
+    if (speedBar) speedBar.style.width = `${cfg.stats.speed}%`;
+    if (accelBar) accelBar.style.width = `${cfg.stats.accel}%`;
+    if (handlingBar) handlingBar.style.width = `${cfg.stats.handling}%`;
+    if (driftBar) driftBar.style.width = `${cfg.stats.drift}%`;
+  }
+
+  updateLeaderboardUI() {
+    const bestLapEl = document.getElementById('best-lap-display');
+    const bestRaceEl = document.getElementById('best-race-display');
+    if (!this.leaderboard) return;
+
+    const record = this.leaderboard.getRecord(this.currentTrackId);
+    if (bestLapEl) {
+      bestLapEl.innerText = record.bestLapTime
+        ? `${this.leaderboard.formatTime(record.bestLapTime)} (${record.lapRecordHolder || 'Rekord'})`
+        : '--:--.--';
+    }
+    if (bestRaceEl) {
+      bestRaceEl.innerText = record.bestRaceTime
+        ? `${this.leaderboard.formatTime(record.bestRaceTime)} (${record.raceRecordHolder || 'Rekord'})`
+        : '--:--.--';
     }
   }
 
@@ -204,34 +294,45 @@ export class Game {
 
     const cfg = this.currentTrackConfig;
     const spots = getGridSpots(this.currentTrackId, this.botCount);
+    const rivalTypes = ['thunder-muscle', 'apex-formula', 'mud-raider', 'drift-king', 'red-fire'];
+
     for (let i = 0; i < spots.length; i++) {
       const spot = spots[i];
       const isAI = i > 0;
 
-      let maxSpeed = 50;
-      let acceleration = 22;
-
-      if (isAI) {
+      let car;
+      if (!isAI) {
+        // Player chosen vehicle
+        car = new IsometricCar({
+          typeId: this.selectedCarTypeId,
+          name: `${this.selectedCarType.name} (Spieler)`,
+          isAI: false,
+          x: spot.x,
+          z: spot.z,
+          angle: spot.angle
+        });
+      } else {
+        // Diverse AI rivals with skill-tuned physics
+        const rivalTypeId = rivalTypes[(i - 1) % rivalTypes.length];
         const botConfig = getBotCarConfig(this.botDifficulty, i - 1);
-        maxSpeed = botConfig.maxSpeed;
-        acceleration = botConfig.acceleration;
-      }
 
-      const car = new IsometricCar({
-        name: spot.name,
-        color: spot.color,
-        isAI,
-        x: spot.x,
-        z: spot.z,
-        angle: spot.angle,
-        maxSpeed,
-        acceleration
-      });
+        car = new IsometricCar({
+          typeId: rivalTypeId,
+          name: spot.name,
+          color: spot.color,
+          isAI: true,
+          x: spot.x,
+          z: spot.z,
+          angle: spot.angle,
+          maxSpeed: botConfig.maxSpeed,
+          acceleration: botConfig.acceleration
+        });
+      }
 
       this.scene.add(car.mesh);
       this.vehicles.push(car);
 
-      const tracker = this.circuitTrack.createVehicleTracker(spot.name);
+      const tracker = this.circuitTrack.createVehicleTracker(car.name);
       this.trackers.push(tracker);
 
       if (isAI) {
@@ -654,6 +755,14 @@ export class Game {
       this.centerMsg.classList.add('show');
     }
 
+    const submission = this.leaderboard.submitRecord(this.currentTrackId, {
+      lapTime: this.playerTracker ? this.playerTracker.bestLapTime : null,
+      raceTime: this.raceTime,
+      carName: this.selectedCarType ? this.selectedCarType.name : 'Red Fire'
+    });
+
+    this.updateLeaderboardUI();
+
     setTimeout(() => {
       if (this.finishModal) {
         const standings = this.circuitTrack.calculateStandings(this.trackers);
@@ -667,6 +776,30 @@ export class Game {
             </div>
           `).join('');
         }
+
+        const badgeEl = document.getElementById('finish-record-badge');
+        if (badgeEl) {
+          if (submission && (submission.isNewBestLap || submission.isNewBestRace)) {
+            badgeEl.classList.remove('hidden');
+          } else {
+            badgeEl.classList.add('hidden');
+          }
+        }
+
+        const bestTimesEl = document.getElementById('finish-best-times');
+        if (bestTimesEl && submission) {
+          bestTimesEl.innerHTML = `
+            <div class="finish-record-row">
+              <span>STRECKEN-REKORD (RUNDE):</span>
+              <strong>${submission.bestLapTime ? this.formatTime(submission.bestLapTime) : '--:--.--'} (${submission.bestLapCar || '-'})</strong>
+            </div>
+            <div class="finish-record-row">
+              <span>STRECKEN-REKORD (3 RUNDEN):</span>
+              <strong>${submission.bestRaceTime ? this.formatTime(submission.bestRaceTime) : '--:--.--'} (${submission.bestRaceCar || '-'})</strong>
+            </div>
+          `;
+        }
+
         this.finishModal.classList.remove('hidden');
       }
     }, 1500);
@@ -694,9 +827,13 @@ export class Game {
   }
 
   formatTime(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds * 100) % 100);
+    if (typeof seconds !== 'number' || seconds <= 0 || isNaN(seconds)) {
+      return '--:--.--';
+    }
+    const totalSecs = Math.floor(seconds);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    const ms = Math.round(seconds * 100) % 100;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   }
 

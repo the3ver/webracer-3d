@@ -22,6 +22,8 @@ export class ArcadePhysics {
     this.steerSpeed = options.steerSpeed || 2.5;
     this.normalGrip = options.normalGrip || 8.0; // lateral friction coefficient
     this.driftGrip = options.driftGrip || 2.2;   // lower lateral friction when drifting/handbrake
+    this.offroadResist = options.offroadResist !== undefined ? options.offroadResist : 0.50;
+    this.mass = options.mass || 1.0;
     this.radius = options.radius || 1.8; // collision bounding radius
 
     // Vertical / Jump Physics
@@ -42,7 +44,11 @@ export class ArcadePhysics {
   update(dt, input = {}, surface = { friction: 1.0, maxSpeedMultiplier: 1.0, grip: 1.0 }) {
     const { throttle = 0, steer = 0, handbrake = false } = input;
     const surfaceFriction = surface?.friction ?? 1.0;
-    const surfaceMaxSpeed = this.maxSpeed * (surface?.maxSpeedMultiplier ?? 1.0);
+    const baseMult = surface?.maxSpeedMultiplier ?? 1.0;
+    const effectiveMult = baseMult < 1.0
+      ? Math.min(1.0, baseMult * (this.offroadResist / 0.50))
+      : baseMult;
+    const surfaceMaxSpeed = this.maxSpeed * effectiveMult;
     const surfaceGrip = surface?.grip ?? 1.0;
 
     // Vertical Jump / Gravity Integration

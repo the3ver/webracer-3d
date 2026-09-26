@@ -33,6 +33,12 @@ export class CircuitMeshBuilder {
     this.buildTunnels();
     if (this.theme === 'alpine-summit') {
       this.buildAlpineSummitProps();
+    } else if (this.theme === 'canyon-chasm') {
+      this.buildCanyonProps();
+    } else if (this.theme === 'neon-velodrome') {
+      this.buildNeonVelodromeProps();
+    } else if (this.theme === 'desert-dunes') {
+      this.buildDesertProps();
     } else {
       this.buildPineValleyProps();
     }
@@ -40,12 +46,18 @@ export class CircuitMeshBuilder {
   }
 
   buildGroundAndHills() {
-    // Main valley floor
+    let groundColor = 0x386641;
+    if (this.theme === 'alpine-summit') groundColor = 0xd9e2ec;
+    else if (this.theme === 'canyon-chasm') groundColor = 0xb45309;
+    else if (this.theme === 'neon-velodrome') groundColor = 0x090d16;
+    else if (this.theme === 'desert-dunes') groundColor = 0xd4a373;
+
+    // Main valley / terrain floor
     const groundGeo = new THREE.PlaneGeometry(650, 650);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x386641, // lush pine-valley meadow green
-      roughness: 0.95,
-      metalness: 0.02
+      color: groundColor,
+      roughness: this.theme === 'neon-velodrome' ? 0.35 : 0.95,
+      metalness: this.theme === 'neon-velodrome' ? 0.5 : 0.02
     });
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
     groundMesh.rotation.x = -Math.PI / 2;
@@ -53,8 +65,8 @@ export class CircuitMeshBuilder {
     groundMesh.receiveShadow = true;
     this.group.add(groundMesh);
 
-    // Decorative perimeter hills/mountain silhouettes around the valley (Pine Valley only)
-    if (this.theme !== 'alpine-summit') {
+    // Decorative perimeter hills (Pine Valley only)
+    if (this.theme === 'pine-valley') {
       const hillMat = new THREE.MeshStandardMaterial({
         color: 0x24422b,
         roughness: 0.98,
@@ -987,6 +999,301 @@ export class CircuitMeshBuilder {
 
       tree.position.set(tp.x, 0, tp.z);
       this.group.add(tree);
+    });
+  }
+
+  buildCanyonProps() {
+    const canyonMat = new THREE.MeshStandardMaterial({
+      color: 0xba532b,
+      roughness: 0.9,
+      metalness: 0.05
+    });
+    const darkRockMat = new THREE.MeshStandardMaterial({
+      color: 0x6e2814,
+      roughness: 0.95
+    });
+
+    // 1. Canyon rock spires & sandstone towers
+    const spireDefs = [
+      { x: 155, z: 40, r: 16, h: 42 },
+      { x: -135, z: -55, r: 18, h: 38 },
+      { x: -125, z: 95, r: 15, h: 44 },
+      { x: 105, z: -70, r: 17, h: 40 },
+      { x: 20, z: 145, r: 19, h: 46 },
+      { x: -20, z: -85, r: 14, h: 34 }
+    ];
+
+    spireDefs.forEach(s => {
+      const spire = new THREE.Mesh(
+        new THREE.CylinderGeometry(s.r * 0.45, s.r, s.h, 7),
+        canyonMat
+      );
+      spire.name = 'canyon_spire';
+      spire.position.set(s.x, s.h * 0.5 - 1, s.z);
+      spire.castShadow = true;
+      spire.receiveShadow = true;
+      this.group.add(spire);
+    });
+
+    // 2. Canyon Mesa Plateaus
+    const mesaDefs = [
+      { x: -165, z: 40, w: 45, d: 55, h: 26 },
+      { x: 170, z: -35, w: 50, d: 40, h: 28 },
+      { x: 0, z: 170, w: 60, d: 45, h: 30 }
+    ];
+
+    mesaDefs.forEach(m => {
+      const mesa = new THREE.Mesh(
+        new THREE.BoxGeometry(m.w, m.h, m.d),
+        darkRockMat
+      );
+      mesa.name = 'canyon_mesa';
+      mesa.position.set(m.x, m.h * 0.5 - 1, m.z);
+      mesa.castShadow = true;
+      mesa.receiveShadow = true;
+      this.group.add(mesa);
+    });
+
+    // 3. Deep Chasm Ravine & Canyon Jump Bridge
+    const chasmGroup = new THREE.Group();
+    chasmGroup.name = 'chasm_ravine';
+
+    // Dark ravine pit beneath the road jump
+    const pitGeo = new THREE.BoxGeometry(45, 16, 26);
+    const pitMat = new THREE.MeshStandardMaterial({ color: 0x240d06, roughness: 1.0 });
+    const pit = new THREE.Mesh(pitGeo, pitMat);
+    pit.name = 'chasm_pit';
+    pit.position.set(25, -8.5, 95);
+    chasmGroup.add(pit);
+
+    // Rocky ravine cliff walls on north and south edges
+    const wallGeo = new THREE.BoxGeometry(48, 10, 4);
+    const wallNorth = new THREE.Mesh(wallGeo, canyonMat);
+    wallNorth.name = 'chasm_wall_north';
+    wallNorth.position.set(25, -4, 108);
+    chasmGroup.add(wallNorth);
+
+    const wallSouth = new THREE.Mesh(wallGeo, canyonMat);
+    wallSouth.name = 'chasm_wall_south';
+    wallSouth.position.set(25, -4, 82);
+    chasmGroup.add(wallSouth);
+
+    // Natural red rock arch flanking the chasm
+    const archMat = new THREE.MeshStandardMaterial({ color: 0xa8431f, roughness: 0.88 });
+    const archBeam = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 30), archMat);
+    archBeam.name = 'canyon_rock_arch';
+    archBeam.position.set(40, 14, 95);
+    chasmGroup.add(archBeam);
+
+    const archPillar1 = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3.5, 16, 6), archMat);
+    archPillar1.position.set(40, 7, 108);
+    chasmGroup.add(archPillar1);
+
+    const archPillar2 = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3.5, 16, 6), archMat);
+    archPillar2.position.set(40, 7, 82);
+    chasmGroup.add(archPillar2);
+
+    this.group.add(chasmGroup);
+  }
+
+  buildNeonVelodromeProps() {
+    const cyberDarkMat = new THREE.MeshStandardMaterial({ color: 0x111625, metalness: 0.8, roughness: 0.2 });
+    const neonCyanMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
+    const neonPinkMat = new THREE.MeshBasicMaterial({ color: 0xf72585 });
+    const neonPurpleMat = new THREE.MeshBasicMaterial({ color: 0x7209b7 });
+
+    // 1. Neon Overhead Arches across track
+    const archSpots = [
+      { x: -40, z: -50, rotY: 0 },
+      { x: 45, z: -50, rotY: 0 },
+      { x: 0, z: 40, rotY: Math.PI * 0.15 }
+    ];
+
+    archSpots.forEach(s => {
+      const archGroup = new THREE.Group();
+      archGroup.name = 'neon_arch';
+
+      const postL = new THREE.Mesh(new THREE.BoxGeometry(0.8, 8, 0.8), cyberDarkMat);
+      postL.position.set(0, 4, 11);
+      archGroup.add(postL);
+
+      const postR = new THREE.Mesh(new THREE.BoxGeometry(0.8, 8, 0.8), cyberDarkMat);
+      postR.position.set(0, 4, -11);
+      archGroup.add(postR);
+
+      const cross = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.8, 23), cyberDarkMat);
+      cross.position.set(0, 8.2, 0);
+      archGroup.add(cross);
+
+      // Glowing neon light bar
+      const glowBar = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.2, 22), neonCyanMat);
+      glowBar.position.set(0, 7.8, 0);
+      archGroup.add(glowBar);
+
+      archGroup.position.set(s.x, 0, s.z);
+      archGroup.rotation.y = s.rotY;
+      this.group.add(archGroup);
+    });
+
+    // 2. Glowing Neon Edge Strips along the straight
+    for (let x = -80; x <= 80; x += 30) {
+      const stripL = new THREE.Mesh(new THREE.BoxGeometry(26, 0.25, 0.3), neonPinkMat);
+      stripL.name = 'neon_light_strip';
+      stripL.position.set(x, 0.1, -61);
+      this.group.add(stripL);
+
+      const stripR = new THREE.Mesh(new THREE.BoxGeometry(26, 0.25, 0.3), neonCyanMat);
+      stripR.name = 'neon_light_strip';
+      stripR.position.set(x, 0.1, -39);
+      this.group.add(stripR);
+    }
+
+    // 3. Banked Curve Markers & Neon Billboards
+    const billboardDefs = [
+      { x: 145, z: 20, w: 22, h: 7, color: neonPinkMat },
+      { x: -145, z: 25, w: 22, h: 7, color: neonCyanMat },
+      { x: 0, z: 80, w: 28, h: 8, color: neonPurpleMat }
+    ];
+
+    billboardDefs.forEach(b => {
+      const bbGroup = new THREE.Group();
+      bbGroup.name = 'neon_billboard';
+
+      const screen = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, 0.5), b.color);
+      screen.position.y = 8;
+      bbGroup.add(screen);
+
+      const pole1 = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 8), cyberDarkMat);
+      pole1.position.set(-b.w * 0.4, 4, 0);
+      bbGroup.add(pole1);
+
+      const pole2 = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 8), cyberDarkMat);
+      pole2.position.set(b.w * 0.4, 4, 0);
+      bbGroup.add(pole2);
+
+      bbGroup.position.set(b.x, 0, b.z);
+      this.group.add(bbGroup);
+    });
+
+    // Banked curve structures
+    const marker = new THREE.Mesh(new THREE.BoxGeometry(6, 2, 6), cyberDarkMat);
+    marker.name = 'banked_curve_marker';
+    marker.position.set(130, 1, 20);
+    this.group.add(marker);
+  }
+
+  buildDesertProps() {
+    const duneMat = new THREE.MeshStandardMaterial({
+      color: 0xe0a96d,
+      roughness: 0.98
+    });
+    const palmTrunkMat = new THREE.MeshStandardMaterial({
+      color: 0x7f4f24,
+      roughness: 0.9
+    });
+    const palmFrondMat = new THREE.MeshStandardMaterial({
+      color: 0x386641,
+      roughness: 0.8
+    });
+    const quicksandMat = new THREE.MeshStandardMaterial({
+      color: 0x936639,
+      roughness: 1.0
+    });
+    const oasisWaterMat = new THREE.MeshStandardMaterial({
+      color: 0x0077b6,
+      roughness: 0.1,
+      metalness: 0.9
+    });
+
+    // 1. Rolling sand dunes
+    const duneDefs = [
+      { x: -140, z: -60, r: 45, h: 16 },
+      { x: 150, z: -40, r: 50, h: 18 },
+      { x: 140, z: 90, r: 42, h: 15 },
+      { x: -130, z: 80, r: 46, h: 17 },
+      { x: -15, z: -80, r: 38, h: 14 }
+    ];
+
+    duneDefs.forEach(d => {
+      const dune = new THREE.Mesh(
+        new THREE.SphereGeometry(d.r, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.45),
+        duneMat
+      );
+      dune.name = 'desert_dune_mound';
+      dune.scale.y = d.h / d.r;
+      dune.position.set(d.x, -2, d.z);
+      dune.receiveShadow = true;
+      this.group.add(dune);
+    });
+
+    // 2. Quicksand Hazard Traps
+    const quicksandHazards = [
+      { x: 20, z: 90, r: 12 },
+      { x: -45, z: 95, r: 11 }
+    ];
+
+    quicksandHazards.forEach(q => {
+      const patch = new THREE.Mesh(
+        new THREE.CylinderGeometry(q.r, q.r, 0.2, 16),
+        quicksandMat
+      );
+      patch.name = 'quicksand_trap';
+      patch.position.set(q.x, 0.02, q.z);
+      patch.receiveShadow = true;
+      this.group.add(patch);
+    });
+
+    // 3. Oasis Water Pool & Palm Trees
+    const oasisPool = new THREE.Mesh(
+      new THREE.CylinderGeometry(16, 16, 0.15, 20),
+      oasisWaterMat
+    );
+    oasisPool.name = 'oasis_water_patch';
+    oasisPool.position.set(-10, 0.03, 30);
+    this.group.add(oasisPool);
+
+    // Palm tree cluster
+    const palmPositions = [
+      { x: -18, z: 24, s: 1.1 },
+      { x: -22, z: 36, s: 1.3 },
+      { x: -3, z: 42, s: 1.0 },
+      { x: 4, z: 22, s: 1.2 },
+      { x: -15, z: 44, s: 0.9 }
+    ];
+
+    palmPositions.forEach(p => {
+      const palm = new THREE.Group();
+
+      // Slender curved trunk
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28 * p.s, 0.45 * p.s, 6.0 * p.s, 6),
+        palmTrunkMat
+      );
+      trunk.name = 'oasis_palm_trunk';
+      trunk.position.y = 3.0 * p.s;
+      trunk.rotation.z = -0.08;
+      palm.add(trunk);
+
+      // Palm fronds
+      for (let f = 0; f < 6; f++) {
+        const angle = (f / 6) * Math.PI * 2;
+        const frond = new THREE.Mesh(
+          new THREE.BoxGeometry(0.4 * p.s, 0.08 * p.s, 3.2 * p.s),
+          palmFrondMat
+        );
+        frond.name = 'oasis_palm_fronds';
+        frond.position.set(
+          Math.sin(angle) * 1.4 * p.s,
+          6.0 * p.s,
+          Math.cos(angle) * 1.4 * p.s
+        );
+        frond.rotation.y = angle;
+        frond.rotation.x = 0.28;
+        palm.add(frond);
+      }
+
+      palm.position.set(p.x, 0, p.z);
+      this.group.add(palm);
     });
   }
 }
