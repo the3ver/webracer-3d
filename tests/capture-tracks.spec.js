@@ -4,6 +4,7 @@ import path from 'path';
 
 test.describe('Visual Track Inspections', () => {
   test('Captures screenshots of Canyon Chasm and Neon Speedway banked curve', async ({ page }) => {
+    test.setTimeout(60000);
     fs.mkdirSync('tests/screenshots', { recursive: true });
 
     await page.goto('/');

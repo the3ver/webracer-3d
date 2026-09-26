@@ -404,6 +404,72 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     await expect(page.locator('#best-lap-display')).toContainText('Apex Formula');
     await expect(page.locator('#best-race-display')).toContainText('01:27.20');
   });
+
+  test('Detailed 3D Car Geometry, Procedural Liveries, and Suspension are active in browser runtime', async ({ page }) => {
+    // 1. Check player car geometry features
+    const carDetails = await page.evaluate(() => {
+      const player = window.game.player;
+      let hasSplitter = false;
+      let hasDiffuser = false;
+      let hasFenders = false;
+      let hasTexture = false;
+      let hasBrakeCaliper = false;
+
+      player.mesh.traverse((c) => {
+        if (c.name && c.name.includes('splitter')) hasSplitter = true;
+        if (c.name && c.name.includes('diffuser')) hasDiffuser = true;
+        if (c.name && c.name.includes('fender')) hasFenders = true;
+        if (c.name && c.name.includes('caliper')) hasBrakeCaliper = true;
+        if (c.material && c.material.map) hasTexture = true;
+      });
+
+      return {
+        hasSplitter,
+        hasDiffuser,
+        hasFenders,
+        hasBrakeCaliper,
+        hasTexture,
+        hasSuspensionState: !!player.suspension
+      };
+    });
+
+    expect(carDetails.hasSplitter).toBe(true);
+    expect(carDetails.hasDiffuser).toBe(true);
+    expect(carDetails.hasFenders).toBe(true);
+    expect(carDetails.hasBrakeCaliper).toBe(true);
+    expect(carDetails.hasTexture).toBe(true);
+    expect(carDetails.hasSuspensionState).toBe(true);
+
+    // 2. Start race and capture close-up screenshots of cars on track
+    await page.click('#btn-start');
+    await page.waitForFunction(() => window.game && window.game.state === 'RACING', { timeout: 8000 });
+    
+    // Zoom camera to show full vehicle in isometric 3D view
+    await page.evaluate(() => {
+      window.game.camera.zoom = 24;
+      window.game.camera.updateProjectionMatrix();
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'tests/screenshots/car-detail-supercar.png' });
+
+    // Switch to Mud Raider to show offroad coilovers & knobby tires
+    await page.evaluate(() => {
+      window.game.setCarType('mud-raider');
+      window.game.camera.zoom = 24;
+      window.game.camera.updateProjectionMatrix();
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'tests/screenshots/car-detail-buggy.png' });
+
+    // Switch to Apex Formula to show open-cockpit, canards and massive rear slicks
+    await page.evaluate(() => {
+      window.game.setCarType('apex-formula');
+      window.game.camera.zoom = 24;
+      window.game.camera.updateProjectionMatrix();
+    });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: 'tests/screenshots/car-detail-formula.png' });
+  });
 });
 
 
