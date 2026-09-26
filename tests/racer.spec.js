@@ -470,6 +470,52 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'tests/screenshots/car-detail-formula.png' });
   });
+
+  test('Configurable lap count (3, 6, 10 laps) updates HUD and triggers race finish when reached', async ({ page }) => {
+    // 1. Initial state defaults to 3 laps
+    expect(await page.evaluate(() => window.game.totalLaps)).toBe(3);
+    await expect(page.locator('#lap-val')).toContainText('/3');
+
+    // 2. Select 6 laps
+    await page.click('#btn-laps-6');
+    expect(await page.evaluate(() => window.game.totalLaps)).toBe(6);
+    expect(await page.evaluate(() => window.game.circuitTrack.totalLaps)).toBe(6);
+    await expect(page.locator('#lap-val')).toContainText('/6');
+
+    // 3. Select 10 laps
+    await page.click('#btn-laps-10');
+    expect(await page.evaluate(() => window.game.totalLaps)).toBe(10);
+    expect(await page.evaluate(() => window.game.circuitTrack.totalLaps)).toBe(10);
+    await expect(page.locator('#lap-val')).toContainText('/10');
+
+    // 4. Set back to 3 laps and simulate race completion
+    await page.click('#btn-laps-3');
+    expect(await page.evaluate(() => window.game.totalLaps)).toBe(3);
+    await expect(page.locator('#lap-val')).toContainText('/3');
+
+    await page.click('#btn-start');
+    await page.waitForFunction(() => window.game && window.game.state === 'RACING', { timeout: 8000 });
+
+    // Simulate player completing 3 laps
+    await page.evaluate(() => {
+      const g = window.game;
+      const t = g.playerTracker;
+      const wps = g.circuitTrack.waypoints;
+      
+      for (let lap = 0; lap < 3; lap++) {
+        for (let i = 1; i < wps.length; i++) {
+          g.circuitTrack.updateTracker(t, wps[i], 0.1);
+        }
+        g.circuitTrack.updateTracker(t, wps[0], 0.1);
+      }
+      g.updateTrackProgression(0.016);
+    });
+
+    // Game state should become FINISHED and finish modal should appear
+    expect(await page.evaluate(() => window.game.playerTracker.isFinished)).toBe(true);
+    expect(await page.evaluate(() => window.game.state)).toBe('FINISHED');
+    await expect(page.locator('#finish-modal')).toBeVisible({ timeout: 4000 });
+  });
 });
 
 

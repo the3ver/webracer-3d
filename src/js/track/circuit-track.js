@@ -6,6 +6,7 @@ export class CircuitTrack {
   constructor(options = {}) {
     this.waypoints = options.waypoints || [];
     this.trackWidth = options.trackWidth || 16;
+    this.totalLaps = options.totalLaps !== undefined ? options.totalLaps : 3;
     this.ramps = options.ramps || [];
     this.quicksandHazards = options.quicksandHazards || [];
     this.iceHazards = options.iceHazards || [];

@@ -131,7 +131,7 @@ export class Game {
     }
 
     const cfg = this.currentTrackConfig;
-    this.totalLaps = cfg.totalLaps || 3;
+    this.totalLaps = this.totalLaps || cfg.totalLaps || 3;
 
     this.circuitTrack = new CircuitTrack({
       waypoints: cfg.waypoints,
@@ -366,6 +366,15 @@ export class Game {
     this.updateConfigSelectorsUI();
   }
 
+  setTotalLaps(laps) {
+    this.totalLaps = laps;
+    if (this.circuitTrack) {
+      this.circuitTrack.totalLaps = laps;
+    }
+    this.updateConfigSelectorsUI();
+    this.updateHUD();
+  }
+
   setupConfigSelectorsUI() {
     const botButtons = document.querySelectorAll('#bot-count-group [data-bots]');
     botButtons.forEach(btn => {
@@ -383,6 +392,14 @@ export class Game {
       });
     });
 
+    const lapButtons = document.querySelectorAll('#lap-count-group [data-laps]');
+    lapButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const laps = parseInt(btn.getAttribute('data-laps'), 10);
+        this.setTotalLaps(laps);
+      });
+    });
+
     this.updateConfigSelectorsUI();
   }
 
@@ -397,6 +414,12 @@ export class Game {
     diffButtons.forEach(btn => {
       const diff = btn.getAttribute('data-difficulty');
       btn.classList.toggle('active', diff === this.botDifficulty);
+    });
+
+    const lapButtons = document.querySelectorAll('#lap-count-group [data-laps]');
+    lapButtons.forEach(btn => {
+      const laps = parseInt(btn.getAttribute('data-laps'), 10);
+      btn.classList.toggle('active', laps === this.totalLaps);
     });
   }
 
@@ -836,7 +859,7 @@ export class Game {
   }
 
   resetGridPositions() {
-    const spots = this.currentTrackConfig.gridSpots;
+    const spots = getGridSpots(this.currentTrackId, this.botCount);
     for (let i = 0; i < this.vehicles.length; i++) {
       const car = this.vehicles[i];
       const spot = spots[i];

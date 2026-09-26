@@ -9,122 +9,166 @@ export const PINE_VALLEY_WAYPOINTS = [
   { x: 80, z: -40 },
   { x: 120, z: -40 },
 
-  // Turn 1 & 2: Sweeping right turn into the east sector
-  { x: 160, z: -20 },
-  { x: 180, z: 20 },
-  { x: 170, z: 60 },
-  { x: 140, z: 90 },
+  // Turn 1 & 2: Fast sweeping Castrol Esses
+  { x: 155, z: -30 },
+  { x: 180, z: -5 },
+  { x: 185, z: 30 },
 
-  // Sector 2: The Hairpin
-  { x: 110, z: 100 },
-  { x: 80, z: 80 },
-  { x: 70, z: 40 },
+  // Sector 2: The Hairpin & Pine Forest descent
+  { x: 165, z: 65 },
+  { x: 130, z: 85 },
+  { x: 95, z: 80 },
+  { x: 75, z: 50 },
 
-  // Sector 3: Technical Chicane & Infield S-Curves
-  { x: 40, z: 30 },
-  { x: 10, z: 50 },
-  { x: -20, z: 70 },
-  { x: -60, z: 70 },
+  // Sector 3: Technical Infield GP S-Curves
+  { x: 45, z: 15 },
+  { x: 15, z: -5 },
+  { x: -15, z: 10 },
+  { x: -35, z: 30 },
+  { x: -55, z: 55 },
 
-  // Turn 4 & 5: West sweep leading back to start/finish
-  { x: -100, z: 50 },
-  { x: -120, z: 20 },
-  { x: -110, z: -20 },
-  { x: -80, z: -40 }
+  // Back straight with Jump Ramp (ramp at x: -38, z: 73.5)
+  { x: -75, z: 72 },
+  { x: -100, z: 70 },
+
+  // Western sweep around the lake returning to start/finish
+  { x: -115, z: 45 },
+  { x: -118, z: 15 },
+  { x: -108, z: -18 },
+  { x: -85, z: -38 },
+  { x: -65, z: -40 }
 ];
 
 export const ALPINE_SUMMIT_WAYPOINTS = [
   // High-altitude Main Straight (heading +X)
   { x: -40, z: 0 },
   { x: 0, z: 0 },
-  { x: 50, z: 0 },
+  { x: 45, z: 0 },
 
-  // Climbing curves into eastern mountain ridges
-  { x: 95, z: 20 },
-  { x: 125, z: 60 },
-  { x: 120, z: 110 },
-  { x: 80, z: 140 },
+  // Eastern Ascent & Serpentine Switchbacks
+  { x: 80, z: 15 },
+  { x: 110, z: 40 },
+  { x: 125, z: 75 },
+
+  // Hairpin 1 "Devil's Elbow"
+  { x: 110, z: 105 },
+  { x: 75, z: 105 },
+  { x: 50, z: 80 },
+  { x: 70, z: 55 },
+  { x: 105, z: 70 },
+
+  // High Summit Plateau with Ice Hazards (ice at 100,125 and 60,135)
+  { x: 110, z: 115 },
+  { x: 85, z: 135 },
+  { x: 55, z: 135 },
 
   // The Gotthard Alpine Tunnel Sector (through the mountain ridge)
   { x: 30, z: 130 },  // Tunnel Entrance Portal
   { x: -20, z: 110 }, // Mountain Interior Gallery
   { x: -70, z: 90 },  // Tunnel Exit Portal
 
-  // Western descent and hairpin sweep
-  { x: -115, z: 65 },
-  { x: -130, z: 25 },
-  { x: -105, z: -10 },
-  { x: -75, z: 0 }
+  // Western descent and cliffside switchbacks
+  { x: -105, z: 75 },
+  { x: -130, z: 55 },
+  { x: -140, z: 25 },
+  { x: -125, z: 0 },
+  { x: -95, z: -10 },
+  { x: -65, z: -5 }
 ];
 
 export const CANYON_CHASM_WAYPOINTS = [
   // Canyon Floor Straight (heading +X)
-  { x: -40, z: -40 },
-  { x: 0, z: -40 },
-  { x: 45, z: -40 },
+  { x: -60, z: -40 },
+  { x: -20, z: -40 },
+  { x: 20, z: -40 },
+  { x: 60, z: -40 },
+  { x: 100, z: -40 },
 
   // Sandstone Ridge Sweeper
-  { x: 90, z: -25 },
-  { x: 120, z: 15 },
-  { x: 110, z: 65 },
+  { x: 135, z: -25 },
+  { x: 165, z: 10 },
+  { x: 165, z: 50 },
+  { x: 140, z: 80 },
 
   // Approach to the Deep Chasm Ravine (Jump over the Gorge)
-  { x: 80, z: 90 },
-  { x: 40, z: 95 },
-  { x: 0, z: 95 },
+  { x: 110, z: 92 },
+  { x: 75, z: 92 },
+  { x: 42, z: 92 }, // Takeoff ramp heading west across ravine
+  { x: 0, z: 92 },  // Landing across the chasm gap
 
-  // Western Mesa Switchback
-  { x: -45, z: 80 },
-  { x: -85, z: 50 },
-  { x: -105, z: 10 },
-  { x: -85, z: -25 }
+  // Western Mesa Switchback & Butte Loop
+  { x: -35, z: 92 },
+  { x: -75, z: 95 },
+  { x: -115, z: 85 },
+  { x: -145, z: 60 },
+  { x: -160, z: 20 },
+  { x: -145, z: -15 },
+  { x: -115, z: -35 },
+  { x: -85, z: -40 }
 ];
 
 export const NEON_VELODROME_WAYPOINTS = [
-  // High-Speed Straight (heading +X)
+  // High-Speed Supersonic Straight (heading +X)
   { x: -40, z: -50 },
   { x: 0, z: -50 },
   { x: 45, z: -50 },
+  { x: 85, z: -45 },
 
   // East Super-Banked Oval Curve
-  { x: 95, z: -35 },
-  { x: 130, z: 0 },
-  { x: 125, z: 45 },
-  { x: 85, z: 75 },
+  { x: 120, z: -25 },
+  { x: 145, z: 5 },
+  { x: 140, z: 45 },
+  { x: 115, z: 75 },
+  { x: 80, z: 85 },
 
-  // Infield Chicane
-  { x: 40, z: 60 },
-  { x: 0, z: 40 },
-  { x: -40, z: 65 },
+  // Neon Infield Diving Chicane & Slalom
+  { x: 45, z: 65 },
+  { x: 15, z: 40 },
+  { x: -10, z: 10 },
+  { x: -35, z: -5 },
+  { x: -65, z: 15 },
+  { x: -55, z: 55 },
 
   // West Super-Banked Oval Curve
-  { x: -85, z: 75 },
-  { x: -125, z: 35 },
-  { x: -120, z: -15 },
-  { x: -85, z: -45 }
+  { x: -85, z: 80 },
+  { x: -120, z: 60 },
+  { x: -135, z: 25 },
+  { x: -125, z: -15 },
+  { x: -95, z: -40 },
+  { x: -70, z: -50 }
 ];
 
 export const DESERT_DUNES_WAYPOINTS = [
   // Sahara Main Straight (heading +X)
-  { x: -40, z: -20 },
-  { x: 10, z: -20 },
-  { x: 60, z: -15 },
+  { x: -50, z: -20 },
+  { x: -10, z: -20 },
+  { x: 35, z: -20 },
+  { x: 80, z: -20 },
+  { x: 115, z: -10 },
 
-  // Dune Ridge Slalom
-  { x: 105, z: 10 },
-  { x: 130, z: 50 },
-  { x: 100, z: 85 },
-  { x: 55, z: 75 },
+  // Dune Ridge Slalom & Sandy Sweepers
+  { x: 145, z: 15 },
+  { x: 160, z: 50 },
+  { x: 140, z: 85 },
+  { x: 100, z: 95 },
+  { x: 70, z: 70 },
+  { x: 45, z: 50 },
+  { x: 20, z: 55 },
 
-  // Oasis Lake Hairpin (surrounded by quicksand hazard zones)
-  { x: 20, z: 90 },
-  { x: -25, z: 105 },
-  { x: -65, z: 85 },
+  // Oasis Lake Hairpin (quicksand traps at 20,90 and -45,95)
+  { x: 5, z: 75 },
+  { x: 5, z: 100 },
+  { x: -15, z: 120 },
+  { x: -45, z: 120 },
+  { x: -75, z: 95 },
 
-  // Dune Valley Straight
-  { x: -90, z: 45 },
-  { x: -105, z: 5 },
-  { x: -80, z: -20 }
+  // Wadi Switchbacks & Ancient Ruins Straight
+  { x: -70, z: 55 },
+  { x: -90, z: 25 },
+  { x: -120, z: 35 },
+  { x: -145, z: 15 },
+  { x: -130, z: -15 },
+  { x: -90, z: -20 }
 ];
 
 export const TRACK_PRESETS = {
