@@ -294,15 +294,18 @@ export class IsometricCar {
     this.mesh.position.z = this.physics.z;
     this.mesh.rotation.y = -this.physics.angle;
 
-    // Chassis pitch tilt when jumping/airborne
+    // Chassis pitch tilt when jumping/airborne and roll on banked curves
     if (this.chassis) {
       this.chassis.rotation.z = this.physics.pitch;
+      this.chassis.rotation.x = this.physics.roll || 0;
     }
 
-    // Keep drop shadow planted at ground level
+    // Keep drop shadow planted at ground or road deck level
     if (this.shadowMesh) {
-      this.shadowMesh.position.y = 0.03 - this.physics.y;
-      const heightRatio = Math.min(1.0, this.physics.y / 6.0);
+      const roadGround = this.physics.groundY || 0;
+      this.shadowMesh.position.y = 0.03 + roadGround - this.physics.y;
+      const heightAboveRoad = Math.max(0, this.physics.y - roadGround);
+      const heightRatio = Math.min(1.0, heightAboveRoad / 6.0);
       this.shadowMesh.material.opacity = 0.45 * (1.0 - heightRatio * 0.55);
       const s = Math.max(0.65, 1.0 - heightRatio * 0.25);
       this.shadowMesh.scale.set(s, s, 1.0);

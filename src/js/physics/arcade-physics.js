@@ -32,6 +32,7 @@ export class ArcadePhysics {
     this.isAirborne = false;
     this.justLanded = false;
     this.pitch = 0;
+    this.roll = 0;
   }
 
   launchJump(verticalVelocity = 12.0) {
@@ -50,22 +51,26 @@ export class ArcadePhysics {
       : baseMult;
     const surfaceMaxSpeed = this.maxSpeed * effectiveMult;
     const surfaceGrip = surface?.grip ?? 1.0;
+    const roadY = (surface && surface.roadY !== undefined) ? surface.roadY : 0;
+    const targetRoll = (surface && surface.bankRoll !== undefined) ? surface.bankRoll : 0;
+    this.roll = this.roll !== undefined ? (this.roll + (targetRoll - this.roll) * Math.min(1.0, 10 * dt)) : targetRoll;
 
     // Vertical Jump / Gravity Integration
-    if (this.isAirborne || this.y > 0) {
+    if (this.isAirborne || this.y > roadY) {
       const gravity = 22.0;
       this.vy -= gravity * dt;
       this.y += this.vy * dt;
       this.pitch = Math.max(-0.28, Math.min(0.28, this.vy * 0.022));
 
-      if (this.y <= 0) {
-        this.y = 0;
+      if (this.y <= roadY) {
+        this.y = roadY;
         this.vy = 0;
         this.isAirborne = false;
         this.justLanded = true;
         this.pitch = 0;
       }
     } else {
+      this.y = roadY;
       this.justLanded = false;
     }
 

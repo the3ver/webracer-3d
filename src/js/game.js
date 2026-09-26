@@ -557,6 +557,36 @@ export class Game {
           });
         }
       }
+
+      // Check chasm ravine fall
+      if (this.circuitTrack.chasmRavine) {
+        const rav = this.circuitTrack.chasmRavine;
+        if (p.x >= rav.minX && p.x <= rav.maxX && p.z >= rav.minZ && p.z <= rav.maxZ) {
+          if (!p.isAirborne || p.y < 0.2) {
+            p.y = -20;
+            p.speed = 0;
+            p.vx = 0;
+            p.vz = 0;
+            if (car === this.player) {
+              this.audioSynth.playImpact();
+            }
+            if (!car._isRespawning) {
+              car._isRespawning = true;
+              setTimeout(() => {
+                p.x = rav.respawnX || 75;
+                p.z = rav.respawnZ || 92;
+                p.angle = rav.respawnAngle || Math.PI;
+                p.y = 0;
+                p.speed = 0;
+                p.vx = 0;
+                p.vz = 0;
+                p.isAirborne = false;
+                car._isRespawning = false;
+              }, 700);
+            }
+          }
+        }
+      }
     }
 
     // 4. Emit drift particles (stones, mud, tire rubber) flying sideways & backwards
@@ -805,14 +835,17 @@ export class Game {
     }, 1500);
   }
 
-  restartRace() {
-    if (this.finishModal) this.finishModal.classList.add('hidden');
+  resetGridPositions() {
     const spots = this.currentTrackConfig.gridSpots;
     for (let i = 0; i < this.vehicles.length; i++) {
       const car = this.vehicles[i];
       const spot = spots[i];
+      if (!car || !spot) continue;
       car.physics.x = spot.x;
       car.physics.z = spot.z;
+      car.physics.y = 0;
+      car.physics.vy = 0;
+      car.physics.isAirborne = false;
       car.physics.angle = spot.angle;
       car.physics.speed = 0;
       car.physics.vx = 0;
@@ -823,7 +856,40 @@ export class Game {
       this.trackers[i] = this.circuitTrack.createVehicleTracker(car.name);
     }
     this.playerTracker = this.trackers[0];
+  }
+
+  restartRace() {
+    if (this.finishModal) this.finishModal.classList.add('hidden');
+    this.resetGridPositions();
     this.startRace();
+  }
+
+  returnToMenu() {
+    if (this.finishModal) this.finishModal.classList.add('hidden');
+    if (this.centerMsg) {
+      this.centerMsg.classList.remove('show');
+      this.centerMsg.innerText = '';
+    }
+    this.state = 'MENU';
+    this.raceTime = 0.0;
+    this.resetGridPositions();
+
+    if (this.overlay) {
+      this.overlay.classList.remove('hidden');
+      this.overlay.classList.add('visible');
+    }
+
+    // Reset camera position to track start
+    const cfg = this.currentTrackConfig;
+    const pStart = cfg.playerStart || cfg.waypoints[0];
+    if (this.camera && this.cameraOffset) {
+      this.camera.position.set(pStart.x + this.cameraOffset.x, this.cameraOffset.y, pStart.z + this.cameraOffset.z);
+      this.camera.lookAt(pStart.x, 0, pStart.z);
+    }
+
+    this.updateTrackSelectorUI();
+    this.updateLeaderboardUI();
+    this.updateHUD();
   }
 
   formatTime(seconds) {

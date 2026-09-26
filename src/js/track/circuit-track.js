@@ -6,9 +6,11 @@ export class CircuitTrack {
   constructor(options = {}) {
     this.waypoints = options.waypoints || [];
     this.trackWidth = options.trackWidth || 16;
-    this.totalLaps = options.totalLaps || 3;
     this.ramps = options.ramps || [];
     this.quicksandHazards = options.quicksandHazards || [];
+    this.iceHazards = options.iceHazards || [];
+    this.chasmRavine = options.chasmRavine || null;
+    this.bankedCurves = options.bankedCurves || [];
     this.segments = [];
     this.totalLength = 0;
 
@@ -117,6 +119,34 @@ export class CircuitTrack {
    * @returns {{ surface: 'asphalt'|'curb'|'grass', friction: number, maxSpeedMultiplier: number, grip: number }}
    */
   getTrackSurfaceAt(x, z) {
+    if (this.chasmRavine) {
+      const ch = this.chasmRavine;
+      if (x >= ch.minX && x <= ch.maxX && z >= ch.minZ && z <= ch.maxZ) {
+        return {
+          surface: 'chasm_void',
+          isChasmGap: true,
+          friction: 0.1,
+          maxSpeedMultiplier: 0.2,
+          grip: 0.1
+        };
+      }
+    }
+
+    if (this.iceHazards && this.iceHazards.length > 0) {
+      for (let i = 0; i < this.iceHazards.length; i++) {
+        const ice = this.iceHazards[i];
+        const dist = Math.hypot(x - ice.x, z - ice.z);
+        if (dist <= ice.radius) {
+          return {
+            surface: 'ice',
+            friction: ice.friction || 0.22,
+            maxSpeedMultiplier: 1.05,
+            grip: ice.grip || 0.3
+          };
+        }
+      }
+    }
+
     if (this.quicksandHazards && this.quicksandHazards.length > 0) {
       for (let i = 0; i < this.quicksandHazards.length; i++) {
         const h = this.quicksandHazards[i];
@@ -128,6 +158,23 @@ export class CircuitTrack {
             maxSpeedMultiplier: 0.38,
             grip: 0.4
           };
+        }
+      }
+    }
+
+    let roadY = 0;
+    let bankRoll = 0;
+
+    if (this.bankedCurves && this.bankedCurves.length > 0) {
+      for (let i = 0; i < this.bankedCurves.length; i++) {
+        const b = this.bankedCurves[i];
+        const dist = Math.hypot(x - b.center.x, z - b.center.z);
+        if (dist < b.radius + 20) {
+          const factor = Math.max(0, 1.0 - Math.abs(dist - b.radius) / 25);
+          if (factor > 0) {
+            roadY = (b.elevation || 4.5) * factor;
+            bankRoll = (b.bankAngle || 0.52) * factor;
+          }
         }
       }
     }
@@ -158,11 +205,11 @@ export class CircuitTrack {
     const curbWidth = 2.0;
 
     if (minDistance <= halfTrack) {
-      return { surface: 'asphalt', friction: 1.0, maxSpeedMultiplier: 1.0, grip: 1.0 };
+      return { surface: 'asphalt', friction: 1.0, maxSpeedMultiplier: bankRoll > 0.1 ? 1.15 : 1.0, grip: bankRoll > 0.1 ? 1.25 : 1.0, roadY, bankRoll };
     } else if (minDistance <= halfTrack + curbWidth) {
-      return { surface: 'curb', friction: 0.9, maxSpeedMultiplier: 0.88, grip: 0.85 };
+      return { surface: 'curb', friction: 0.9, maxSpeedMultiplier: 0.88, grip: 0.85, roadY, bankRoll };
     } else {
-      return { surface: 'grass', friction: 0.5, maxSpeedMultiplier: 0.45, grip: 0.55 };
+      return { surface: 'grass', friction: 0.5, maxSpeedMultiplier: 0.45, grip: 0.55, roadY: 0, bankRoll: 0 };
     }
   }
 

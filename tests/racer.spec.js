@@ -191,6 +191,14 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     await expect(finishModal).not.toHaveClass(/hidden/, { timeout: 4000 });
     await expect(page.locator('#podium-list')).toBeVisible();
     await expect(page.locator('#btn-restart')).toBeVisible();
+    await expect(page.locator('#btn-to-menu')).toBeVisible();
+
+    // Click "ZUR STRECKENAUSWAHL" to return to main menu overlay
+    await page.click('#btn-to-menu');
+    await expect(finishModal).toHaveClass(/hidden/);
+    const overlay = page.locator('#overlay-screen');
+    await expect(overlay).toBeVisible();
+    expect(await page.evaluate(() => window.game.state)).toBe('MENU');
   });
 
   test('Jump ramp exists in 3D scene and launches vehicle into air with visible height', async ({ page }) => {

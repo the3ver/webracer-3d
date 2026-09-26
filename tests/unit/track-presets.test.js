@@ -208,4 +208,87 @@ describe('Track Presets & Alpine Summit Circuit', () => {
     });
     assert.ok(hasDuneDecor, 'Desert dunes mesh should generate sand dunes, quicksand patches, and oasis decor');
   });
+
+  it('builds Neon Velodrome track ribbon with true 3D banking and outer edge elevation', () => {
+    const velodrome = getTrackPreset('neon-velodrome');
+    const veloBuilder = new CircuitMeshBuilder(velodrome.waypoints, velodrome.trackWidth, velodrome.ramps, {
+      theme: 'neon-velodrome',
+      bankedCurves: velodrome.bankedCurves
+    });
+    const veloMesh = veloBuilder.build();
+
+    let asphaltMesh = null;
+    veloMesh.traverse(child => {
+      if (child.isMesh && child.name === 'asphalt_road') asphaltMesh = child;
+    });
+
+    assert.ok(asphaltMesh, 'Asphalt road mesh should exist');
+    const pos = asphaltMesh.geometry.getAttribute('position');
+    let maxY = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y > maxY) maxY = y;
+    }
+
+    assert.ok(maxY >= 3.5, `Banked curve should elevate outer road vertices to >= 3.5m, got ${maxY}`);
+  });
+
+  it('builds Canyon Chasm with an open road gap and visible chasm trench with bridge wreckage', () => {
+    const canyon = getTrackPreset('canyon-chasm');
+    const canyonBuilder = new CircuitMeshBuilder(canyon.waypoints, canyon.trackWidth, canyon.ramps, {
+      theme: 'canyon-chasm',
+      chasmRavine: canyon.chasmRavine
+    });
+    const canyonMesh = canyonBuilder.build();
+
+    let hasBridgeWreckage = false;
+    let hasCliffWall = false;
+    let hasChasmTrench = false;
+
+    canyonMesh.traverse(child => {
+      if (child.name && child.name.includes('wreckage')) hasBridgeWreckage = true;
+      if (child.name && child.name.includes('cliff_wall')) hasCliffWall = true;
+      if (child.name && child.name.includes('chasm_ravine')) hasChasmTrench = true;
+    });
+
+    assert.ok(hasChasmTrench, 'Canyon chasm ravine should be generated');
+    assert.ok(hasBridgeWreckage, 'Ravine bottom should contain collapsed bridge wreckage');
+    assert.ok(hasCliffWall, 'Ravine should have vertical rock cliff walls');
+  });
+
+  it('verifies that Canyon Chasm track ribbon has an actual open gap with no asphalt triangles across the ravine', () => {
+    const canyon = getTrackPreset('canyon-chasm');
+    const canyonBuilder = new CircuitMeshBuilder(canyon.waypoints, canyon.trackWidth, canyon.ramps, {
+      theme: 'canyon-chasm',
+      chasmRavine: canyon.chasmRavine
+    });
+    const canyonMesh = canyonBuilder.build();
+
+    let asphaltMesh = null;
+    canyonMesh.traverse(child => {
+      if (child.isMesh && child.name === 'asphalt_road') asphaltMesh = child;
+    });
+
+    assert.ok(asphaltMesh, 'Asphalt mesh must exist');
+    const pos = asphaltMesh.geometry.getAttribute('position');
+    const idx = asphaltMesh.geometry.getIndex();
+
+    // Verify there are no triangles whose centroid lies completely inside the chasm void (x: 10..30, z: 82..102)
+    let trianglesInChasmVoid = 0;
+    for (let i = 0; i < idx.count; i += 3) {
+      const i0 = idx.getX(i);
+      const i1 = idx.getX(i + 1);
+      const i2 = idx.getX(i + 2);
+
+      const cx = (pos.getX(i0) + pos.getX(i1) + pos.getX(i2)) / 3;
+      const cz = (pos.getZ(i0) + pos.getZ(i1) + pos.getZ(i2)) / 3;
+
+      if (cx > 10 && cx < 30 && cz > 82 && cz < 102) {
+        trianglesInChasmVoid++;
+      }
+    }
+
+    assert.equal(trianglesInChasmVoid, 0, `Expected 0 asphalt triangles in chasm void, found ${trianglesInChasmVoid}`);
+  });
 });
+

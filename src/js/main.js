@@ -22,6 +22,15 @@ function init() {
     });
   }
 
+  // Return to Menu Button (Finish Podium Screen)
+  const btnToMenu = document.getElementById('btn-to-menu');
+  if (btnToMenu) {
+    btnToMenu.addEventListener('click', () => {
+      btnToMenu.blur();
+      game.returnToMenu();
+    });
+  }
+
   // Settings Buttons & Modals
   const btnSettingsStart = document.getElementById('btn-settings-start');
   if (btnSettingsStart) {

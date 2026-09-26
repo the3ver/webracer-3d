@@ -49,21 +49,107 @@ export class CircuitMeshBuilder {
     let groundColor = 0x386641;
     if (this.theme === 'alpine-summit') groundColor = 0xd9e2ec;
     else if (this.theme === 'canyon-chasm') groundColor = 0xb45309;
-    else if (this.theme === 'neon-velodrome') groundColor = 0x090d16;
+    else if (this.theme === 'neon-velodrome') groundColor = 0x070b14;
     else if (this.theme === 'desert-dunes') groundColor = 0xd4a373;
 
-    // Main valley / terrain floor
-    const groundGeo = new THREE.PlaneGeometry(650, 650);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: groundColor,
-      roughness: this.theme === 'neon-velodrome' ? 0.35 : 0.95,
-      metalness: this.theme === 'neon-velodrome' ? 0.5 : 0.02
-    });
-    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.rotation.x = -Math.PI / 2;
-    groundMesh.position.y = -0.15;
-    groundMesh.receiveShadow = true;
-    this.group.add(groundMesh);
+    if (this.theme === 'canyon-chasm') {
+      // Excavated Canyon Ravine Terrain with 22-meter deep gorge
+      const canyonMat = new THREE.MeshStandardMaterial({
+        color: 0xb45309,
+        roughness: 0.96,
+        metalness: 0.02
+      });
+      const darkTrenchMat = new THREE.MeshStandardMaterial({
+        color: 0x3d170a,
+        roughness: 1.0,
+        metalness: 0.0
+      });
+      const canyonCliffMat = new THREE.MeshStandardMaterial({
+        color: 0x853618,
+        roughness: 0.95,
+        metalness: 0.0
+      });
+
+      // East Mesa Plateau (x: 40 to 380)
+      const eastPlateau = new THREE.Mesh(new THREE.PlaneGeometry(340, 680), canyonMat);
+      eastPlateau.rotation.x = -Math.PI / 2;
+      eastPlateau.position.set(210, -0.15, 0);
+      eastPlateau.receiveShadow = true;
+      this.group.add(eastPlateau);
+
+      // West Mesa Plateau (x: -360 to 0)
+      const westPlateau = new THREE.Mesh(new THREE.PlaneGeometry(360, 680), canyonMat);
+      westPlateau.rotation.x = -Math.PI / 2;
+      westPlateau.position.set(-180, -0.15, 0);
+      westPlateau.receiveShadow = true;
+      this.group.add(westPlateau);
+
+      // North ground gap filler (z: -340 to -20)
+      const northPlateau = new THREE.Mesh(new THREE.PlaneGeometry(42, 320), canyonMat);
+      northPlateau.rotation.x = -Math.PI / 2;
+      northPlateau.position.set(20, -0.15, -180);
+      northPlateau.receiveShadow = true;
+      this.group.add(northPlateau);
+
+      // South ground gap filler (z: 200 to 340)
+      const southPlateau = new THREE.Mesh(new THREE.PlaneGeometry(42, 140), canyonMat);
+      southPlateau.rotation.x = -Math.PI / 2;
+      southPlateau.position.set(20, -0.15, 270);
+      southPlateau.receiveShadow = true;
+      this.group.add(southPlateau);
+
+      // 22-Meter Deep Canyon Gorge Trench Floor
+      const trenchFloor = new THREE.Mesh(new THREE.PlaneGeometry(40, 220), darkTrenchMat);
+      trenchFloor.rotation.x = -Math.PI / 2;
+      trenchFloor.position.set(20, -22.0, 90);
+      trenchFloor.name = 'chasm_ravine_floor';
+      trenchFloor.receiveShadow = true;
+      this.group.add(trenchFloor);
+
+      // East Vertical Cliff Wall
+      const cliffEast = new THREE.Mesh(new THREE.BoxGeometry(1.5, 22, 220), canyonCliffMat);
+      cliffEast.position.set(40, -11.0, 90);
+      cliffEast.name = 'chasm_cliff_wall_east';
+      cliffEast.castShadow = true;
+      cliffEast.receiveShadow = true;
+      this.group.add(cliffEast);
+
+      // West Vertical Cliff Wall
+      const cliffWest = new THREE.Mesh(new THREE.BoxGeometry(1.5, 22, 220), canyonCliffMat);
+      cliffWest.position.set(0, -11.0, 90);
+      cliffWest.name = 'chasm_cliff_wall_west';
+      cliffWest.castShadow = true;
+      cliffWest.receiveShadow = true;
+      this.group.add(cliffWest);
+
+      // North & South Trench End Walls
+      const cliffNorth = new THREE.Mesh(new THREE.BoxGeometry(40, 22, 1.5), canyonCliffMat);
+      cliffNorth.position.set(20, -11.0, -20);
+      this.group.add(cliffNorth);
+
+      const cliffSouth = new THREE.Mesh(new THREE.BoxGeometry(40, 22, 1.5), canyonCliffMat);
+      cliffSouth.position.set(20, -11.0, 200);
+      this.group.add(cliffSouth);
+    } else {
+      // Main valley / terrain floor
+      const groundGeo = new THREE.PlaneGeometry(650, 650);
+      const groundMat = new THREE.MeshStandardMaterial({
+        color: groundColor,
+        roughness: this.theme === 'neon-velodrome' ? 0.35 : 0.95,
+        metalness: this.theme === 'neon-velodrome' ? 0.5 : 0.02
+      });
+      const groundMesh = new THREE.Mesh(groundGeo, groundMat);
+      groundMesh.rotation.x = -Math.PI / 2;
+      groundMesh.position.y = -0.15;
+      groundMesh.receiveShadow = true;
+      this.group.add(groundMesh);
+
+      if (this.theme === 'neon-velodrome') {
+        const grid = new THREE.GridHelper(600, 60, 0x00f5d4, 0x142033);
+        grid.position.y = -0.10;
+        this.group.add(grid);
+      }
+    }
 
     // Decorative perimeter hills (Pine Valley only)
     if (this.theme === 'pine-valley') {
@@ -95,6 +181,52 @@ export class CircuitMeshBuilder {
     }
   }
 
+  getTrackPointHeightAndBank(pt, i, divisions) {
+    let leftY = 0.01;
+    let rightY = 0.01;
+    let bank = 0;
+    let isChasmGap = false;
+
+    if (this.theme === 'neon-velodrome') {
+      // East banked curve centered at (120, 20)
+      const dEast = Math.hypot(pt.x - 120, pt.z - 20);
+      // West banked curve centered at (-110, 15)
+      const dWest = Math.hypot(pt.x - (-110), pt.z - 15);
+
+      let factor = 0;
+      if (pt.x > 60 && dEast < 65) {
+        factor = Math.max(0, 1.0 - Math.abs(dEast - 45) / 28);
+      } else if (pt.x < -55 && dWest < 65) {
+        factor = Math.max(0, 1.0 - Math.abs(dWest - 45) / 28);
+      }
+
+      if (factor > 0) {
+        bank = 0.52 * factor; // 30 degrees
+        const baseElevation = bank * 7.5;
+        const halfW = this.trackWidth * 0.5;
+        rightY = baseElevation + Math.sin(bank) * halfW * 0.95 + 0.05;
+        leftY = baseElevation - Math.sin(bank) * halfW * 0.25 + 0.05;
+      }
+    } else if (this.theme === 'canyon-chasm') {
+      // 36m open air gorge gap
+      if (pt.z > 75 && pt.z < 110 && pt.x > 3 && pt.x < 40) {
+        isChasmGap = true;
+      }
+    } else if (this.theme === 'desert-dunes') {
+      const undulation = Math.sin(pt.x * 0.04) * Math.cos(pt.z * 0.04) * 2.2;
+      leftY = undulation + 0.02;
+      rightY = undulation + 0.02;
+    } else if (this.theme === 'alpine-summit') {
+      if (pt.z > 60) {
+        const elev = Math.sin((pt.x + 80) * 0.02) * 2.5 + 2.0;
+        leftY = Math.max(0.01, elev);
+        rightY = Math.max(0.01, elev);
+      }
+    }
+
+    return { leftY, rightY, bank, isChasmGap };
+  }
+
   buildTrackRibbon() {
     const points = this.waypoints.map(w => new THREE.Vector3(w.x, 0, w.z));
     const curve = new THREE.CatmullRomCurve3(points, true, 'centripetal');
@@ -120,20 +252,21 @@ export class CircuitMeshBuilder {
     for (let i = 0; i <= divisions; i++) {
       const pt = sampledPoints[i % divisions];
       const norm = normals[i % divisions];
+      const info = this.getTrackPointHeightAndBank(pt, i, divisions);
 
       const leftX = pt.x + norm.x * halfW;
       const leftZ = pt.z + norm.z * halfW;
       const rightX = pt.x - norm.x * halfW;
       const rightZ = pt.z - norm.z * halfW;
 
-      positions.push(leftX, 0.01, leftZ);
-      positions.push(rightX, 0.01, rightZ);
+      positions.push(leftX, info.leftY, leftZ);
+      positions.push(rightX, info.rightY, rightZ);
 
       const v = (i / divisions) * 40;
       uvs.push(0, v);
       uvs.push(1, v);
 
-      if (i < divisions) {
+      if (i < divisions && !info.isChasmGap) {
         const base = i * 2;
         indices.push(base, base + 1, base + 2);
         indices.push(base + 1, base + 3, base + 2);
@@ -152,6 +285,7 @@ export class CircuitMeshBuilder {
     });
 
     const asphaltMesh = new THREE.Mesh(asphaltGeo, asphaltMat);
+    asphaltMesh.name = 'asphalt_road';
     asphaltMesh.receiveShadow = true;
     this.group.add(asphaltMesh);
   }
@@ -172,21 +306,32 @@ export class CircuitMeshBuilder {
     const dashGeo = new THREE.PlaneGeometry(0.35, 1.8);
 
     for (let i = 0; i < divisions; i += 2) {
+      const pt = sampledPoints[i];
+      const info = this.getTrackPointHeightAndBank(pt, i, divisions);
+      if (info.isChasmGap) continue;
+
       const prev = sampledPoints[(i - 1 + divisions) % divisions];
       const next = sampledPoints[(i + 1) % divisions];
       const dir = new THREE.Vector3().subVectors(next, prev).normalize();
+
+      const centerY = (info.leftY + info.rightY) * 0.5 + 0.025;
 
       const dash = new THREE.Mesh(dashGeo, lineMat);
       dash.rotation.order = 'YXZ';
       dash.rotation.y = Math.atan2(dir.x, dir.z) + Math.PI;
       dash.rotation.x = -Math.PI / 2;
-      dash.position.set(sampledPoints[i].x, 0.02, sampledPoints[i].z);
+      if (info.bank !== 0) {
+        dash.rotation.z = info.bank;
+      }
+      dash.position.set(pt.x, centerY, pt.z);
       dash.name = 'centerline_marking';
       this.group.add(dash);
     }
   }
 
   buildGravelTraps() {
+    if (this.theme !== 'pine-valley') return;
+
     // Gravel runoff zones placed at high speed corners
     const points = this.waypoints.map(w => new THREE.Vector3(w.x, 0, w.z));
     const curve = new THREE.CatmullRomCurve3(points, true, 'centripetal');
@@ -285,9 +430,6 @@ export class CircuitMeshBuilder {
       buffer.push(p3.x, p3.y, p3.z);
     };
 
-    const yInner = 0.035; // slightly above asphalt at 0.01
-    const yOuter = 0.055; // slightly raised outer curb edge
-
     for (let i = 0; i < divisions; i++) {
       const nextI = (i + 1) % divisions;
       const pt0 = sampledPoints[i];
@@ -295,33 +437,55 @@ export class CircuitMeshBuilder {
       const n0 = normals[i];
       const n1 = normals[nextI];
 
+      const info0 = this.getTrackPointHeightAndBank(pt0, i, divisions);
+      const info1 = this.getTrackPointHeightAndBank(pt1, nextI, divisions);
+
+      // Do not draw curbs or barriers floating across open chasm ravine
+      if (info0.isChasmGap || info1.isChasmGap) {
+        continue;
+      }
+
       const isRed = (i % 2 === 0);
       const targetBuffer = isRed ? redPositions : whitePositions;
 
+      const yLeftIn0 = info0.leftY + 0.025;
+      const yLeftOut0 = info0.leftY + 0.045;
+      const yLeftOut1 = info1.leftY + 0.045;
+      const yLeftIn1 = info1.leftY + 0.025;
+      const yLeftDrop0 = Math.max(-0.05, info0.leftY - 0.08);
+      const yLeftDrop1 = Math.max(-0.05, info1.leftY - 0.08);
+
+      const yRightIn0 = info0.rightY + 0.025;
+      const yRightOut0 = info0.rightY + 0.045;
+      const yRightOut1 = info1.rightY + 0.045;
+      const yRightIn1 = info1.rightY + 0.025;
+      const yRightDrop0 = Math.max(-0.05, info0.rightY - 0.08);
+      const yRightDrop1 = Math.max(-0.05, info1.rightY - 0.08);
+
       // 1. Left Curb (outside +norm):
-      const leftInner0 = new THREE.Vector3(pt0.x + n0.x * halfW, yInner, pt0.z + n0.z * halfW);
-      const leftOuter0 = new THREE.Vector3(pt0.x + n0.x * (halfW + curbW), yOuter, pt0.z + n0.z * (halfW + curbW));
-      const leftOuter1 = new THREE.Vector3(pt1.x + n1.x * (halfW + curbW), yOuter, pt1.z + n1.z * (halfW + curbW));
-      const leftInner1 = new THREE.Vector3(pt1.x + n1.x * halfW, yInner, pt1.z + n1.z * halfW);
+      const leftInner0 = new THREE.Vector3(pt0.x + n0.x * halfW, yLeftIn0, pt0.z + n0.z * halfW);
+      const leftOuter0 = new THREE.Vector3(pt0.x + n0.x * (halfW + curbW), yLeftOut0, pt0.z + n0.z * (halfW + curbW));
+      const leftOuter1 = new THREE.Vector3(pt1.x + n1.x * (halfW + curbW), yLeftOut1, pt1.z + n1.z * (halfW + curbW));
+      const leftInner1 = new THREE.Vector3(pt1.x + n1.x * halfW, yLeftIn1, pt1.z + n1.z * halfW);
 
       addQuad(targetBuffer, leftInner0, leftOuter0, leftOuter1, leftInner1);
 
       // Outer bevel drop face for Left Curb
-      const leftDrop0 = new THREE.Vector3(pt0.x + n0.x * (halfW + curbW), -0.05, pt0.z + n0.z * (halfW + curbW));
-      const leftDrop1 = new THREE.Vector3(pt1.x + n1.x * (halfW + curbW), -0.05, pt1.z + n1.z * (halfW + curbW));
+      const leftDrop0 = new THREE.Vector3(pt0.x + n0.x * (halfW + curbW), yLeftDrop0, pt0.z + n0.z * (halfW + curbW));
+      const leftDrop1 = new THREE.Vector3(pt1.x + n1.x * (halfW + curbW), yLeftDrop1, pt1.z + n1.z * (halfW + curbW));
       addQuad(targetBuffer, leftOuter0, leftDrop0, leftDrop1, leftOuter1);
 
       // 2. Right Curb (outside -norm):
-      const rightInner0 = new THREE.Vector3(pt0.x - n0.x * halfW, yInner, pt0.z - n0.z * halfW);
-      const rightOuter0 = new THREE.Vector3(pt0.x - n0.x * (halfW + curbW), yOuter, pt0.z - n0.z * (halfW + curbW));
-      const rightOuter1 = new THREE.Vector3(pt1.x - n1.x * (halfW + curbW), yOuter, pt1.z - n1.z * (halfW + curbW));
-      const rightInner1 = new THREE.Vector3(pt1.x - n1.x * halfW, yInner, pt1.z - n1.z * halfW);
+      const rightInner0 = new THREE.Vector3(pt0.x - n0.x * halfW, yRightIn0, pt0.z - n0.z * halfW);
+      const rightOuter0 = new THREE.Vector3(pt0.x - n0.x * (halfW + curbW), yRightOut0, pt0.z - n0.z * (halfW + curbW));
+      const rightOuter1 = new THREE.Vector3(pt1.x - n1.x * (halfW + curbW), yRightOut1, pt1.z - n1.z * (halfW + curbW));
+      const rightInner1 = new THREE.Vector3(pt1.x - n1.x * halfW, yRightIn1, pt1.z - n1.z * halfW);
 
       addQuad(targetBuffer, rightInner0, rightInner1, rightOuter1, rightOuter0);
 
       // Outer bevel drop face for Right Curb
-      const rightDrop0 = new THREE.Vector3(pt0.x - n0.x * (halfW + curbW), -0.05, pt0.z - n0.z * (halfW + curbW));
-      const rightDrop1 = new THREE.Vector3(pt1.x - n1.x * (halfW + curbW), -0.05, pt1.z - n1.z * (halfW + curbW));
+      const rightDrop0 = new THREE.Vector3(pt0.x - n0.x * (halfW + curbW), yRightDrop0, pt0.z - n0.z * (halfW + curbW));
+      const rightDrop1 = new THREE.Vector3(pt1.x - n1.x * (halfW + curbW), yRightDrop1, pt1.z - n1.z * (halfW + curbW));
       addQuad(targetBuffer, rightOuter0, rightOuter1, rightDrop1, rightDrop0);
 
       // 3. Barriers & Sponsor Hoardings
@@ -334,7 +498,7 @@ export class CircuitMeshBuilder {
           const bannerMat = (i % 18 === 0) ? bannerRedMat : ((i % 12 === 0) ? bannerBlueMat : bannerYellowMat);
           const banner = new THREE.Mesh(bannerGeo, bannerMat);
           banner.name = 'sponsor_banner';
-          banner.position.set(pt0.x + norm.x * (barrierDist + 0.5), 0.9, pt0.z + norm.z * (barrierDist + 0.5));
+          banner.position.set(pt0.x + norm.x * (barrierDist + 0.5), info0.leftY + 0.9, pt0.z + norm.z * (barrierDist + 0.5));
           banner.rotation.y = Math.atan2(dir.x, dir.z);
           banner.castShadow = true;
           this.group.add(banner);
@@ -342,15 +506,50 @@ export class CircuitMeshBuilder {
           // Double tire stack
           const mat = (i % 4 === 0) ? tireRedMat : tireMat;
           const barrierLeft = new THREE.Mesh(tireGeo, mat);
-          barrierLeft.position.set(pt0.x + norm.x * barrierDist, 0.7, pt0.z + norm.z * barrierDist);
+          barrierLeft.position.set(pt0.x + norm.x * barrierDist, info0.leftY + 0.7, pt0.z + norm.z * barrierDist);
           barrierLeft.castShadow = true;
           this.group.add(barrierLeft);
         }
 
         const barrierRight = new THREE.Mesh(tireGeo, tireMat);
-        barrierRight.position.set(pt0.x - norm.x * barrierDist, 0.7, pt0.z - norm.z * barrierDist);
+        barrierRight.position.set(pt0.x - norm.x * barrierDist, info0.rightY + 0.7, pt0.z - norm.z * barrierDist);
         barrierRight.castShadow = true;
         this.group.add(barrierRight);
+      }
+
+      // 4. Structural cyber truss pillars and road skirt underneath elevated banked curves
+      if (this.theme === 'neon-velodrome' && info0.rightY > 1.0) {
+        // Vertical road skirt under the elevated outer edge
+        const skirtGeo = new THREE.BoxGeometry(0.5, info0.rightY, 3.2);
+        const skirtMat = new THREE.MeshStandardMaterial({ color: 0x070b14, roughness: 0.6, metalness: 0.4 });
+        const skirt = new THREE.Mesh(skirtGeo, skirtMat);
+        skirt.name = 'banked_road_skirt';
+        skirt.position.set(pt0.x - n0.x * (halfW + curbW * 0.5), info0.rightY * 0.5, pt0.z - n0.z * (halfW + curbW * 0.5));
+        const dir = new THREE.Vector3().subVectors(pt1, pt0).normalize();
+        skirt.rotation.y = Math.atan2(dir.x, dir.z);
+        skirt.castShadow = true;
+        this.group.add(skirt);
+
+        // Cyber truss pillars connecting to the ground
+        if (i % 3 === 0) {
+          const pillarMat = new THREE.MeshStandardMaterial({ color: 0x111625, metalness: 0.8, roughness: 0.3 });
+          const pillarGeo = new THREE.CylinderGeometry(0.4, 0.6, info0.rightY, 6);
+          const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+          pillar.name = 'banked_support_pillar';
+          pillar.position.set(pt0.x - n0.x * (halfW + curbW + 0.6), info0.rightY * 0.5, pt0.z - n0.z * (halfW + curbW + 0.6));
+          pillar.castShadow = true;
+          this.group.add(pillar);
+        }
+
+        // High bank glowing safety fence along the elevated lip
+        if (info0.rightY > 2.0 && i % 2 === 0) {
+          const fenceMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
+          const fence = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.2, 3.0), fenceMat);
+          fence.name = 'banked_safety_fence';
+          fence.position.set(pt0.x - n0.x * (halfW + curbW + 0.8), info0.rightY + 0.6, pt0.z - n0.z * (halfW + curbW + 0.8));
+          fence.rotation.y = Math.atan2(dir.x, dir.z);
+          this.group.add(fence);
+        }
       }
     }
 
@@ -1058,26 +1257,6 @@ export class CircuitMeshBuilder {
     const chasmGroup = new THREE.Group();
     chasmGroup.name = 'chasm_ravine';
 
-    // Dark ravine pit beneath the road jump
-    const pitGeo = new THREE.BoxGeometry(45, 16, 26);
-    const pitMat = new THREE.MeshStandardMaterial({ color: 0x240d06, roughness: 1.0 });
-    const pit = new THREE.Mesh(pitGeo, pitMat);
-    pit.name = 'chasm_pit';
-    pit.position.set(25, -8.5, 95);
-    chasmGroup.add(pit);
-
-    // Rocky ravine cliff walls on north and south edges
-    const wallGeo = new THREE.BoxGeometry(48, 10, 4);
-    const wallNorth = new THREE.Mesh(wallGeo, canyonMat);
-    wallNorth.name = 'chasm_wall_north';
-    wallNorth.position.set(25, -4, 108);
-    chasmGroup.add(wallNorth);
-
-    const wallSouth = new THREE.Mesh(wallGeo, canyonMat);
-    wallSouth.name = 'chasm_wall_south';
-    wallSouth.position.set(25, -4, 82);
-    chasmGroup.add(wallSouth);
-
     // Natural red rock arch flanking the chasm
     const archMat = new THREE.MeshStandardMaterial({ color: 0xa8431f, roughness: 0.88 });
     const archBeam = new THREE.Mesh(new THREE.BoxGeometry(6, 4, 30), archMat);
@@ -1092,6 +1271,56 @@ export class CircuitMeshBuilder {
     const archPillar2 = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 3.5, 16, 6), archMat);
     archPillar2.position.set(40, 7, 82);
     chasmGroup.add(archPillar2);
+
+    // 4. Collapsed Bridge Wreckage at bottom of chasm (-21m)
+    const wreckageGroup = new THREE.Group();
+    wreckageGroup.name = 'canyon_bridge_wreckage';
+
+    const timberMat = new THREE.MeshStandardMaterial({ color: 0x4a2e18, roughness: 0.95 });
+    const rustMat = new THREE.MeshStandardMaterial({ color: 0x5a3d31, roughness: 0.8, metalness: 0.4 });
+
+    const beams = [
+      { x: 12, y: -21.2, z: 88, rotX: 0.2, rotY: 0.4, rotZ: 0.1, sx: 12, sy: 0.8, sz: 1.2 },
+      { x: 28, y: -21.0, z: 96, rotX: -0.1, rotY: 1.2, rotZ: 0.3, sx: 14, sy: 0.8, sz: 1.2 },
+      { x: 20, y: -20.8, z: 92, rotX: 0.3, rotY: -0.5, rotZ: -0.2, sx: 10, sy: 1.0, sz: 1.0 },
+      { x: 35, y: -19.5, z: 84, rotX: 0.5, rotY: 0.8, rotZ: 0.4, sx: 9, sy: 0.7, sz: 1.1 }
+    ];
+
+    beams.forEach(b => {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(b.sx, b.sy, b.sz), timberMat);
+      beam.position.set(b.x, b.y, b.z);
+      beam.rotation.set(b.rotX, b.rotY, b.rotZ);
+      beam.castShadow = true;
+      wreckageGroup.add(beam);
+    });
+
+    const girder1 = new THREE.Mesh(new THREE.BoxGeometry(16, 0.6, 0.6), rustMat);
+    girder1.position.set(22, -21.3, 90);
+    girder1.rotation.set(0.1, 0.7, 0.25);
+    wreckageGroup.add(girder1);
+
+    const girder2 = new THREE.Mesh(new THREE.BoxGeometry(16, 0.6, 0.6), rustMat);
+    girder2.position.set(16, -21.1, 98);
+    girder2.rotation.set(-0.2, -0.6, 0.15);
+    wreckageGroup.add(girder2);
+
+    chasmGroup.add(wreckageGroup);
+
+    // Hazard warning signs at cliff edge
+    const signPostMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+    const signBoardMat = new THREE.MeshStandardMaterial({ color: 0xfca311 });
+    [-1, 1].forEach(side => {
+      const signGroup = new THREE.Group();
+      signGroup.name = 'chasm_hazard_warning';
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 3.5), signPostMat);
+      post.position.y = 1.75;
+      signGroup.add(post);
+      const board = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 0.2), signBoardMat);
+      board.position.y = 3.0;
+      signGroup.add(board);
+      signGroup.position.set(42.5, 0, 92 + side * 9.5);
+      this.group.add(signGroup);
+    });
 
     this.group.add(chasmGroup);
   }
@@ -1180,6 +1409,57 @@ export class CircuitMeshBuilder {
     marker.name = 'banked_curve_marker';
     marker.position.set(130, 1, 20);
     this.group.add(marker);
+
+    // 4. Glowing Neon Curve Chevrons for High-Banked Curves
+    const chevronGeo = new THREE.BoxGeometry(1.2, 0.4, 3.2);
+    for (let a = -0.7; a <= 1.4; a += 0.35) {
+      const cx = 120 + Math.cos(a) * 55;
+      const cz = 20 + Math.sin(a) * 55;
+      const chev = new THREE.Mesh(chevronGeo, neonCyanMat);
+      chev.name = 'neon_banked_chevron';
+      chev.position.set(cx, 6.5, cz);
+      chev.rotation.y = -a;
+      chev.rotation.z = 0.45;
+      this.group.add(chev);
+    }
+    for (let a = 2.4; a <= 4.5; a += 0.35) {
+      const cx = -110 + Math.cos(a) * 55;
+      const cz = 15 + Math.sin(a) * 55;
+      const chev = new THREE.Mesh(chevronGeo, neonPinkMat);
+      chev.name = 'neon_banked_chevron';
+      chev.position.set(cx, 6.5, cz);
+      chev.rotation.y = -a;
+      chev.rotation.z = -0.45;
+      this.group.add(chev);
+    }
+
+    // 5. Cyberpunk City Skyline / Skyscrapers
+    const towerMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.5, metalness: 0.8 });
+    const towerWindowMat = new THREE.MeshBasicMaterial({ color: 0x00f5d4 });
+    const skyscraperDefs = [
+      { x: -180, z: -120, w: 28, d: 24, h: 70 },
+      { x: -140, z: -170, w: 22, d: 22, h: 85 },
+      { x: 0, z: -160, w: 32, d: 26, h: 95 },
+      { x: 140, z: -150, w: 26, d: 26, h: 80 },
+      { x: 190, z: -100, w: 24, d: 20, h: 75 },
+      { x: 190, z: 120, w: 26, d: 26, h: 85 },
+      { x: 130, z: 170, w: 28, d: 24, h: 65 },
+      { x: -130, z: 160, w: 24, d: 22, h: 75 },
+      { x: -190, z: 100, w: 28, d: 28, h: 90 }
+    ];
+
+    skyscraperDefs.forEach(s => {
+      const tower = new THREE.Group();
+      tower.name = 'neon_skyscraper';
+      const body = new THREE.Mesh(new THREE.BoxGeometry(s.w, s.h, s.d), towerMat);
+      body.position.y = s.h * 0.5;
+      tower.add(body);
+      const band = new THREE.Mesh(new THREE.BoxGeometry(s.w + 0.6, 1.2, s.d + 0.6), towerWindowMat);
+      band.position.y = s.h - 4;
+      tower.add(band);
+      tower.position.set(s.x, 0, s.z);
+      this.group.add(tower);
+    });
   }
 
   buildDesertProps() {
@@ -1251,6 +1531,32 @@ export class CircuitMeshBuilder {
     oasisPool.name = 'oasis_water_patch';
     oasisPool.position.set(-10, 0.03, 30);
     this.group.add(oasisPool);
+
+    // 4. Ancient Egyptian Sandstone Colonnade / Monumental Obelisks
+    const sandStoneMat = new THREE.MeshStandardMaterial({ color: 0xcca06e, roughness: 0.9 });
+    const obeliskDefs = [
+      { x: 75, z: -5, h: 18 },
+      { x: 90, z: 5, h: 22 },
+      { x: 110, z: 25, h: 20 },
+      { x: 125, z: 45, h: 24 },
+      { x: 115, z: 65, h: 19 },
+      { x: 80, z: 80, h: 21 }
+    ];
+
+    obeliskDefs.forEach(o => {
+      const colGroup = new THREE.Group();
+      colGroup.name = 'desert_obelisk_monument';
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.4, o.h, 4), sandStoneMat);
+      col.position.y = o.h * 0.5;
+      col.rotation.y = Math.PI * 0.25;
+      colGroup.add(col);
+      const peak = new THREE.Mesh(new THREE.ConeGeometry(1.4, 2.5, 4), sandStoneMat);
+      peak.position.y = o.h + 1.25;
+      peak.rotation.y = Math.PI * 0.25;
+      colGroup.add(peak);
+      colGroup.position.set(o.x, 0, o.z);
+      this.group.add(colGroup);
+    });
 
     // Palm tree cluster
     const palmPositions = [

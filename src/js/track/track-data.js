@@ -175,6 +175,10 @@ export const TRACK_PRESETS = {
     ],
     waypoints: ALPINE_SUMMIT_WAYPOINTS,
     ramps: [],
+    iceHazards: [
+      { id: 'alpine_north_ice_1', x: 100, z: 125, radius: 14, friction: 0.22, grip: 0.3 },
+      { id: 'alpine_north_ice_2', x: 60, z: 135, radius: 12, friction: 0.25, grip: 0.35 }
+    ],
     tunnels: [
       {
         id: 'gotthard_gallery',
@@ -207,20 +211,24 @@ export const TRACK_PRESETS = {
       {
         id: 'canyon_chasm_jump',
         name: 'Ravine Gap Jump',
-        x: 40,
-        z: 95,
-        width: 14.0,
-        length: 9.0,
-        height: 2.6,
-        liftVelocity: 16.0,
+        x: 42,
+        z: 92,
+        width: 16.0,
+        length: 10.0,
+        height: 3.2,
+        liftVelocity: 17.5,
         angle: Math.PI // heading west across ravine
       }
     ],
     chasmRavine: {
-      x: 20,
-      z: 95,
-      width: 40,
-      depth: 30
+      minX: 3,
+      maxX: 40,
+      minZ: 75,
+      maxZ: 110,
+      depth: 22,
+      respawnX: 75,
+      respawnZ: 92,
+      respawnAngle: Math.PI
     },
     tunnels: []
   },
@@ -247,7 +255,16 @@ export const TRACK_PRESETS = {
         name: 'East Super-Banked Oval Curve',
         center: { x: 120, z: 20 },
         radius: 45,
-        bankAngle: 0.18
+        bankAngle: 0.52,
+        elevation: 4.5
+      },
+      {
+        id: 'west_banked_sweeper',
+        name: 'West Super-Banked Oval Curve',
+        center: { x: -110, z: 15 },
+        radius: 45,
+        bankAngle: 0.52,
+        elevation: 4.5
       }
     ],
     tunnels: []
