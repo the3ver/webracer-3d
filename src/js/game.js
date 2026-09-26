@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { TRACK_WAYPOINTS, TRACK_CONFIG, TRACK_PRESETS, getTrackPreset } from './track/track-data.js';
+import { TRACK_WAYPOINTS, TRACK_CONFIG, TRACK_PRESETS, getTrackPreset, getGridSpots } from './track/track-data.js';
 import { CircuitTrack } from './track/circuit-track.js';
 import { CircuitMeshBuilder } from './track/circuit-mesh.js';
 import { IsometricCar } from './vehicles/isometric-car.js';
-import { RacerAI } from './ai/racer-ai.js';
+import { RacerAI, getBotCarConfig, resolveDifficultyProfile } from './ai/racer-ai.js';
 import { EngineAudio } from './audio/engine-audio.js';
 import { DriftParticles } from './effects/drift-particles.js';
 
@@ -14,6 +14,8 @@ export class Game {
     this.currentTrackId = 'pine-valley';
     this.currentTrackConfig = getTrackPreset(this.currentTrackId);
     this.totalLaps = this.currentTrackConfig.totalLaps || 3;
+    this.botCount = 3;
+    this.botDifficulty = 'medium'; // 'beginner' | 'medium' | 'pro'
     this.countdownTimer = 3.99;
     this.isPaused = false;
     this.isSettingsOpen = false;
@@ -47,6 +49,7 @@ export class Game {
     this.trackers = [];
     this.setupTrackAndVehicles();
     this.setupTrackSelectorUI();
+    this.setupConfigSelectorsUI();
 
     // Input state
     this.keys = {
@@ -186,15 +189,33 @@ export class Game {
   }
 
   setupGrid() {
+    // Remove previous vehicle meshes if already present in scene
+    if (this.vehicles && this.vehicles.length > 0) {
+      for (const car of this.vehicles) {
+        if (car && car.mesh) {
+          this.scene.remove(car.mesh);
+        }
+      }
+    }
+
     this.vehicles = [];
     this.aiDrivers = [];
     this.trackers = [];
 
     const cfg = this.currentTrackConfig;
-    const spots = cfg.gridSpots;
+    const spots = getGridSpots(this.currentTrackId, this.botCount);
     for (let i = 0; i < spots.length; i++) {
       const spot = spots[i];
       const isAI = i > 0;
+
+      let maxSpeed = 50;
+      let acceleration = 22;
+
+      if (isAI) {
+        const botConfig = getBotCarConfig(this.botDifficulty, i - 1);
+        maxSpeed = botConfig.maxSpeed;
+        acceleration = botConfig.acceleration;
+      }
 
       const car = new IsometricCar({
         name: spot.name,
@@ -203,8 +224,8 @@ export class Game {
         x: spot.x,
         z: spot.z,
         angle: spot.angle,
-        maxSpeed: isAI ? 42 + (i * 1.5) : 50,
-        acceleration: isAI ? 19 : 22
+        maxSpeed,
+        acceleration
       });
 
       this.scene.add(car.mesh);
@@ -216,8 +237,7 @@ export class Game {
       if (isAI) {
         const ai = new RacerAI({
           waypoints: cfg.waypoints,
-          lookaheadDistance: 11,
-          aggressiveness: 0.86 + (i * 0.04)
+          difficulty: this.botDifficulty
         });
         this.aiDrivers.push(ai);
       }
@@ -225,6 +245,58 @@ export class Game {
 
     this.player = this.vehicles[0];
     this.playerTracker = this.trackers[0];
+
+    if (this.posVal) {
+      this.posVal.innerHTML = `1<small>/${this.vehicles.length}</small>`;
+    }
+  }
+
+  setBotCount(count) {
+    const parsed = parseInt(count, 10);
+    if (isNaN(parsed) || parsed < 1 || parsed > 5) return;
+    this.botCount = parsed;
+    this.setupGrid();
+    this.updateConfigSelectorsUI();
+  }
+
+  setDifficulty(level) {
+    this.botDifficulty = level;
+    this.setupGrid();
+    this.updateConfigSelectorsUI();
+  }
+
+  setupConfigSelectorsUI() {
+    const botButtons = document.querySelectorAll('#bot-count-group [data-bots]');
+    botButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const count = parseInt(btn.getAttribute('data-bots'), 10);
+        this.setBotCount(count);
+      });
+    });
+
+    const diffButtons = document.querySelectorAll('#difficulty-group [data-difficulty]');
+    diffButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const diff = btn.getAttribute('data-difficulty');
+        this.setDifficulty(diff);
+      });
+    });
+
+    this.updateConfigSelectorsUI();
+  }
+
+  updateConfigSelectorsUI() {
+    const botButtons = document.querySelectorAll('#bot-count-group [data-bots]');
+    botButtons.forEach(btn => {
+      const count = parseInt(btn.getAttribute('data-bots'), 10);
+      btn.classList.toggle('active', count === this.botCount);
+    });
+
+    const diffButtons = document.querySelectorAll('#difficulty-group [data-difficulty]');
+    diffButtons.forEach(btn => {
+      const diff = btn.getAttribute('data-difficulty');
+      btn.classList.toggle('active', diff === this.botDifficulty);
+    });
   }
 
   startRace() {

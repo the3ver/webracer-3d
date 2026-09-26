@@ -210,8 +210,8 @@ body, html {
   background: rgba(30, 41, 59, 0.92);
   border: 1px solid var(--panel-border);
   border-radius: 16px;
-  padding: 36px 44px;
-  max-width: 500px;
+  padding: 24px 36px;
+  max-width: 520px;
   width: 90%;
   text-align: center;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
@@ -219,22 +219,22 @@ body, html {
 
 .circuit-title, .podium-title, .settings-title {
   font-family: 'Orbitron', sans-serif;
-  font-size: 38px;
+  font-size: 36px;
   font-weight: 900;
   letter-spacing: 2px;
   color: var(--primary-red);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .sub-title {
-  font-size: 15px;
+  font-size: 14px;
   letter-spacing: 2px;
   color: #94a3b8;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 
 .track-selector {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   text-align: left;
 }
 
@@ -244,20 +244,20 @@ body, html {
   font-weight: 700;
   letter-spacing: 1.5px;
   color: #94a3b8;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
-.track-btn-group {
+.track-btn-group, .config-btn-group {
   display: flex;
   gap: 8px;
 }
 
-.track-select-btn {
+.track-select-btn, .config-select-btn {
   flex: 1;
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid var(--panel-border);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   color: #cbd5e1;
   font-family: 'Rajdhani', sans-serif;
   font-size: 13px;
@@ -267,13 +267,13 @@ body, html {
   text-align: center;
 }
 
-.track-select-btn:hover {
+.track-select-btn:hover, .config-select-btn:hover {
   background: rgba(30, 41, 59, 0.9);
   border-color: #64748b;
   color: #ffffff;
 }
 
-.track-select-btn.active {
+.track-select-btn.active, .config-select-btn.active {
   background: linear-gradient(135deg, rgba(230, 57, 70, 0.25), rgba(30, 41, 59, 0.9));
   border: 1px solid var(--primary-red);
   color: #ffffff;

@@ -69,7 +69,9 @@ export const TRACK_PRESETS = {
       { x: -40, z: -44, angle: 0, color: 0xe63946, name: 'Player (Red Fire)' },
       { x: -40, z: -36, angle: 0, color: 0x4361ee, name: 'Rival Blue (Apex)' },
       { x: -55, z: -44, angle: 0, color: 0xfb8500, name: 'Rival Orange (Viper)' },
-      { x: -55, z: -36, angle: 0, color: 0x2ec4b6, name: 'Rival Teal (Specter)' }
+      { x: -55, z: -36, angle: 0, color: 0x2ec4b6, name: 'Rival Teal (Specter)' },
+      { x: -70, z: -44, angle: 0, color: 0xffd166, name: 'Rival Gold (Comet)' },
+      { x: -70, z: -36, angle: 0, color: 0x06d6a0, name: 'Rival Mint (Phantom)' }
     ],
     waypoints: PINE_VALLEY_WAYPOINTS,
     ramps: [
@@ -97,7 +99,9 @@ export const TRACK_PRESETS = {
       { x: -40, z: -4, angle: 0, color: 0xe63946, name: 'Player (Red Fire)' },
       { x: -40, z: 4, angle: 0, color: 0x4361ee, name: 'Rival Blue (Apex)' },
       { x: -55, z: -4, angle: 0, color: 0xfb8500, name: 'Rival Orange (Viper)' },
-      { x: -55, z: 4, angle: 0, color: 0x2ec4b6, name: 'Rival Teal (Specter)' }
+      { x: -55, z: 4, angle: 0, color: 0x2ec4b6, name: 'Rival Teal (Specter)' },
+      { x: -70, z: -4, angle: 0, color: 0xffd166, name: 'Rival Gold (Comet)' },
+      { x: -70, z: 4, angle: 0, color: 0x06d6a0, name: 'Rival Mint (Phantom)' }
     ],
     waypoints: ALPINE_SUMMIT_WAYPOINTS,
     ramps: [],
@@ -117,6 +121,12 @@ export const TRACK_PRESETS = {
 
 export function getTrackPreset(id) {
   return TRACK_PRESETS[id] || TRACK_PRESETS['pine-valley'];
+}
+
+export function getGridSpots(trackId, botCount = 3) {
+  const preset = getTrackPreset(trackId);
+  const total = Math.max(1, Math.min(preset.gridSpots.length, botCount + 1));
+  return preset.gridSpots.slice(0, total);
 }
 
 // Backward-compatible default exports for existing imports

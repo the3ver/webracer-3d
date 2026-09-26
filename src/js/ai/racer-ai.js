@@ -2,13 +2,100 @@
  * RacerAI: Autonomous racing driver logic for AI grid opponents.
  * Follows waypoints along the racing line, modulates speed through curves,
  * and maintains spacing to avoid running directly into competitors.
+ * Supports configurable skill profiles: 'beginner' (Anfänger), 'medium' (Mittelmaß), and 'pro' (Profi).
  */
+
+export const DIFFICULTY_PROFILES = {
+  beginner: {
+    id: 'beginner',
+    label: 'Anfänger',
+    lookaheadDistance: 10,
+    aggressiveness: 0.78,
+    cornerSpeedHairpin: 0.38,
+    cornerSpeedMedium: 0.58,
+    cornerSpeedFast: 0.90,
+    brakeThreshold: 5.0,
+    canDrift: false,
+    steerSmoothing: 1.6,
+    steeringJitter: 0.04
+  },
+  medium: {
+    id: 'medium',
+    label: 'Mittelmaß',
+    lookaheadDistance: 15,
+    aggressiveness: 0.92,
+    cornerSpeedHairpin: 0.46,
+    cornerSpeedMedium: 0.70,
+    cornerSpeedFast: 0.98,
+    brakeThreshold: 7.0,
+    canDrift: false,
+    steerSmoothing: 2.0,
+    steeringJitter: 0.0
+  },
+  pro: {
+    id: 'pro',
+    label: 'Profi',
+    lookaheadDistance: 22,
+    aggressiveness: 1.04,
+    cornerSpeedHairpin: 0.60,
+    cornerSpeedMedium: 0.82,
+    cornerSpeedFast: 1.00,
+    brakeThreshold: 9.0, // late and efficient trail braking
+    canDrift: true,      // controlled power-drift through sharp hairpins
+    steerSmoothing: 2.5,
+    steeringJitter: 0.0
+  }
+};
+
+export function resolveDifficultyProfile(key = 'medium') {
+  if (!key) return DIFFICULTY_PROFILES.medium;
+  const normalized = key.toLowerCase();
+  if (normalized === 'beginner' || normalized === 'anfänger' || normalized === 'anfaenger' || normalized === 'easy') {
+    return DIFFICULTY_PROFILES.beginner;
+  }
+  if (normalized === 'pro' || normalized === 'profi' || normalized === 'hard' || normalized === 'expert') {
+    return DIFFICULTY_PROFILES.pro;
+  }
+  return DIFFICULTY_PROFILES.medium;
+}
+
+/**
+ * Computes vehicle performance configuration for an AI rival.
+ * For 'pro' difficulty, the bot is given exactly identical speed and acceleration
+ * to the player car (no cheating / unfair advantages).
+ */
+export function getBotCarConfig(difficulty = 'medium', botIndex = 0) {
+  const profile = resolveDifficultyProfile(difficulty);
+  if (profile.id === 'pro') {
+    // 100% fair: Identical to Player car limits
+    return {
+      maxSpeed: 50,
+      acceleration: 22
+    };
+  }
+  if (profile.id === 'beginner') {
+    return {
+      maxSpeed: 38 + Math.min(botIndex * 0.8, 3.0),
+      acceleration: 16 + Math.min(botIndex * 0.5, 2.0)
+    };
+  }
+  // Medium default
+  return {
+    maxSpeed: 44 + Math.min(botIndex * 1.0, 3.5),
+    acceleration: 19 + Math.min(botIndex * 0.6, 2.0)
+  };
+}
+
 export class RacerAI {
   constructor(options = {}) {
     this.waypoints = options.waypoints || [];
-    this.lookaheadDistance = options.lookaheadDistance || 18;
-    this.aggressiveness = options.aggressiveness || 1.0; // 0.8 (safe) to 1.2 (aggressive)
-    this.skill = options.skill || 1.0;
+
+    const profile = resolveDifficultyProfile(options.difficulty || 'medium');
+    this.profile = profile;
+
+    this.lookaheadDistance = options.lookaheadDistance !== undefined ? options.lookaheadDistance : profile.lookaheadDistance;
+    this.aggressiveness = options.aggressiveness !== undefined ? options.aggressiveness : profile.aggressiveness;
+    this.skill = options.skill !== undefined ? options.skill : 1.0;
   }
 
   /**
@@ -23,9 +110,20 @@ export class RacerAI {
       return { throttle: 1, steer: 0, handbrake: false };
     }
 
-    const targetWp = this.waypoints[targetWpIndex % this.waypoints.length];
-    const dx = targetWp.x - car.x;
-    const dz = targetWp.z - car.z;
+    const nWp = this.waypoints.length;
+    const targetWp = this.waypoints[targetWpIndex % nWp];
+    
+    // For Pro AI: Blend target waypoint with upcoming waypoint for smooth apex entry at speed
+    let aimX = targetWp.x;
+    let aimZ = targetWp.z;
+    if (this.profile.canDrift && nWp > 2 && car.speed > 25) {
+      const nextWp = this.waypoints[(targetWpIndex + 1) % nWp];
+      aimX = targetWp.x * 0.7 + nextWp.x * 0.3;
+      aimZ = targetWp.z * 0.7 + nextWp.z * 0.3;
+    }
+
+    const dx = aimX - car.x;
+    const dz = aimZ - car.z;
 
     const targetAngle = Math.atan2(dz, dx);
     let angleDiff = targetAngle - car.angle;
@@ -35,33 +133,47 @@ export class RacerAI {
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
 
     // Steering proportional to angle difference
-    let steer = Math.max(-1.0, Math.min(1.0, angleDiff * 2.0));
+    let steer = Math.max(-1.0, Math.min(1.0, angleDiff * this.profile.steerSmoothing));
 
-    // Look at upcoming curve severity to modulate speed
+    // Optional mild steering jitter for beginner to simulate human hesitation
+    if (this.profile.steeringJitter > 0 && Math.abs(steer) > 0.15) {
+      steer += (Math.sin(car.x * 0.5 + car.z * 0.5) * this.profile.steeringJitter);
+      steer = Math.max(-1.0, Math.min(1.0, steer));
+    }
+
+    // Look at upcoming curve severity to modulate speed based on profile
     const turnSharpness = Math.abs(angleDiff);
     let targetSpeed = car.maxSpeed * this.aggressiveness;
 
     if (turnSharpness > 1.0) {
       // Very sharp corner (hairpin)
-      targetSpeed = car.maxSpeed * 0.42;
+      targetSpeed = car.maxSpeed * this.profile.cornerSpeedHairpin;
     } else if (turnSharpness > 0.5) {
       // Medium corner
-      targetSpeed = car.maxSpeed * 0.68;
+      targetSpeed = car.maxSpeed * this.profile.cornerSpeedMedium;
     } else {
       // Fast curve or straight
-      targetSpeed = car.maxSpeed * 0.98;
+      targetSpeed = car.maxSpeed * this.profile.cornerSpeedFast;
     }
 
     let throttle = 1.0;
-    if (car.speed > targetSpeed + 8) {
+    const brakeThresh = this.profile.brakeThreshold;
+    if (car.speed > targetSpeed + brakeThresh) {
       // Over target speed: apply brake
-      throttle = -0.6;
+      throttle = -0.7;
     } else if (car.speed > targetSpeed) {
       // Coasting
-      throttle = 0.2;
+      throttle = 0.25;
     } else {
       // Accelerating
       throttle = 1.0;
+    }
+
+    // Power drift logic for Pro AI:
+    // If approaching or in a sharp corner at high speed, trigger handbrake to rotate quickly around apex
+    let handbrake = false;
+    if (this.profile.canDrift && turnSharpness > 0.75 && car.speed > car.maxSpeed * 0.55) {
+      handbrake = true;
     }
 
     // Vehicle avoidance
@@ -100,7 +212,7 @@ export class RacerAI {
     return {
       throttle,
       steer,
-      handbrake: false
+      handbrake
     };
   }
 }

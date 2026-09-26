@@ -312,4 +312,35 @@ test.describe('APEX CIRCUIT // 3D Isometric Arcade Racer Tests', () => {
     await page.waitForTimeout(300);
     await page.screenshot({ path: 'tests/screenshots/alpine-western-sweep.png' });
   });
+
+  test('Bot count and difficulty selector updates grid vehicles and AI skill profiles', async ({ page }) => {
+    // Default initial state: 3 Bots (4 vehicles total) on medium difficulty
+    expect(await page.evaluate(() => window.game.botCount)).toBe(3);
+    expect(await page.evaluate(() => window.game.botDifficulty)).toBe('medium');
+    expect(await page.evaluate(() => window.game.vehicles.length)).toBe(4);
+
+    // Switch to 1 Bot (Duell)
+    await page.click('button[data-bots="1"]');
+    expect(await page.evaluate(() => window.game.botCount)).toBe(1);
+    expect(await page.evaluate(() => window.game.vehicles.length)).toBe(2);
+    expect(await page.evaluate(() => window.game.aiDrivers.length)).toBe(1);
+
+    // Switch to Profi difficulty
+    await page.click('button[data-difficulty="pro"]');
+    expect(await page.evaluate(() => window.game.botDifficulty)).toBe('pro');
+    expect(await page.evaluate(() => window.game.aiDrivers[0].profile.id)).toBe('pro');
+    expect(await page.evaluate(() => window.game.vehicles[1].physics.maxSpeed)).toBe(50); // 100% fair top speed
+
+    // Switch to 5 Bots
+    await page.click('button[data-bots="5"]');
+    expect(await page.evaluate(() => window.game.botCount)).toBe(5);
+    expect(await page.evaluate(() => window.game.vehicles.length)).toBe(6);
+    expect(await page.evaluate(() => window.game.aiDrivers.length)).toBe(5);
+
+    // Switch to Anfänger difficulty
+    await page.click('button[data-difficulty="beginner"]');
+    expect(await page.evaluate(() => window.game.botDifficulty)).toBe('beginner');
+    expect(await page.evaluate(() => window.game.aiDrivers[0].profile.id)).toBe('beginner');
+  });
 });
+
